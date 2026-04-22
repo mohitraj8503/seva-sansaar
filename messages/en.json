@@ -1,0 +1,150 @@
+{
+  "Navbar": {
+    "bookings": "Bookings",
+    "listBusiness": "List Business",
+    "admin": "Admin",
+    "login": "Login / Register",
+    "hindi": "हिन्दी",
+    "english": "English"
+  },
+  "Hero": {
+    "badge": "Bharat's Digital Service Infrastructure",
+    "title1": "Professional services.",
+    "title2": "At your doorstep.",
+    "subtitle": "The most trusted platform for verified local experts. Zero commission, direct booking, and guaranteed quality.",
+    "explore": "Explore Services",
+    "join": "Join as Professional",
+    "features": {
+      "verified": "Background Verified",
+      "pricing": "Transparent Pricing",
+      "commission": "Zero Commission",
+      "rating": "4.8+ Rated"
+    },
+    "searchPlaceholder": "Which service are you looking for?"
+  },
+  "Search": {
+    "title": "Search verified services",
+    "geoLabel": "Hyperlocal search — Jamshedpur, Adityapur, Gamharia & nearby",
+    "geoDesc": "Results rank by nearest distance first; Recommended blends distance with ratings and response time.",
+    "filters": "Filters",
+    "categories": "Categories",
+    "rating": "Rating",
+    "distance": "Distance",
+    "useLocation": "Use my location",
+    "mapView": "Map View",
+    "listView": "List View",
+    "ranking": "Ranking",
+    "nearest": "Nearest",
+    "recommended": "Recommended",
+    "noResults": "No providers found in this area. Try widening your search.",
+    "subtitle": "Discover verified experts near you for all your home and business needs."
+  },
+  "Stats": {
+    "title": "Trusted by Thousands",
+    "cities": "Cities covered",
+    "pros": "Verified professionals",
+    "services": "Services completed",
+    "rating": "Average rating"
+  },
+  "Gov": {
+    "title": "Government Backed Initiatives",
+    "subtitle": "Proudly aligned with India's flagship programs for digital transformation and skill development",
+    "badge": "Government Recognized Platform"
+  },
+  "Categories": {
+    "title": "टॉप सेवाएं",
+    "enTitle": "Top Services",
+    "subtitle": "Discover verified professionals for all your home and personal service needs"
+  },
+  "Why": {
+    "title": "Why citizens trust Seva Sansaar",
+    "govt": "Govt Verified",
+    "govtDesc": "DigiLocker-checked pros",
+    "zero": "Zero Fees",
+    "zeroDesc": "No platform commissions",
+    "hyper": "Hyperlocal",
+    "hyperDesc": "Results by nearest distance",
+    "direct": "Direct Connect",
+    "directDesc": "Talk to experts instantly"
+  },
+  "Testimonials": {
+    "title": "नागरिकों की आवाज़",
+    "subtitle": "Voices of Bharat"
+  },
+  "BusinessCTA": {
+    "title": "Grow your business with Seva Sansaar",
+    "desc": "Join 5,000+ professionals earning directly from verified customers across 100+ cities. Zero commission, direct income.",
+    "feature1": "Verified Customers",
+    "feature2": "Zero Commission",
+    "feature3": "Direct Income",
+    "button": "Register as Professional →",
+    "learnMore": "Learn more about the process"
+  },
+  "Footer": {
+    "desc": "Connect verified local service professionals with citizens across Bharat. Your city, your service.",
+    "initiative": "An initiative under Digital India",
+    "quickLinks": "Quick Links",
+    "contact": "Contact & Support",
+    "stayConnected": "Stay Connected",
+    "appStore": "App Store",
+    "playStore": "Play Store",
+    "copyright": "Seva Sansaar",
+    "madeWith": "Made with ❤️ by",
+    "privacy": "Privacy Policy",
+    "terms": "Terms",
+    "grievance": "Grievance Redressal"
+  },
+  "Common": {
+    "verified": "Verified",
+    "viewDetails": "View Details",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "searchPlaceholder": "Search for services, names or localities...",
+    "exploreAll": "Explore All Services",
+    "seeAll": "See all experts"
+  },
+  "Detail": {
+    "servicesOffered": "Services Offered",
+    "workingHours": "Working Hours",
+    "contactAvailability": "Contact & Availability",
+    "serviceAreas": "Service Areas",
+    "recentReviews": "Recent Reviews",
+    "professionalProvider": "Professional Service Provider",
+    "approvalPending": "Approval Pending",
+    "estimatedCost": "Estimated Cost"
+  },
+  "Booking": {
+    "title": "Booking Confirmed!",
+    "returnToSearch": "Return to Search",
+    "premium": "Premium Guaranteed Service",
+    "bookProfessional": "Book Professional",
+    "step": "STEP",
+    "selectDetail": "Select Detail",
+    "setSchedule": "Set Schedule",
+    "address": "Address & Contact",
+    "reviewPay": "Review & Pay",
+    "continue": "Continue",
+    "completePayment": "Complete Payment",
+    "preferredDate": "Preferred Date",
+    "availableSlots": "Available Slots",
+    "popular": "POPULAR",
+    "upi": "UPI / GPAY",
+    "cash": "CASH (POST)"
+  },
+  "Dashboard": {
+    "revenue": "Revenue Estimate",
+    "activeRequests": "Active Requests",
+    "totalBookings": "Total Bookings",
+    "customerRating": "Customer Rating",
+    "followers": "Followers"
+  },
+  "Login": {
+    "title": "Secure Access",
+    "email": "Email Address",
+    "password": "Password",
+    "authenticating": "Authenticating...",
+    "loginButton": "Login",
+    "troubleSigning": "Trouble signing in?",
+    "returnHome": "Return Home"
+  }
+}

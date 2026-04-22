@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Seva Sansaar API
+  version: "1.0.0"
+  description: |
+    HTTP API for Seva Sansaar (bookings, businesses, reviews, owner portal, admin).
+    Admin routes require header `x-api-key` matching `ADMIN_API_KEY` (and `NEXT_PUBLIC_ADMIN_API_KEY` on the client).
+servers:
+  - url: /
+    description: Same origin as the Next.js app
+
+tags:
+  - name: Bookings
+  - name: Businesses
+  - name: Reviews
+  - name: Owner
+  - name: Admin
+  - name: Public
+
+paths:
+  /api/bookings:
+    post:
+      tags: [Bookings]
+      summary: Create booking (Firebase Auth OR guest)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guestBooking: { type: boolean }
+                businessId: { type: string }
+                businessName: { type: string }
+                service: { type: string }
+                date: { type: string, description: YYYY-MM-DD }
+                timeSlot: { type: string }
+                userName: { type: string }
+                userPhone: { type: string }
+                userEmail: { type: string }
+                notes: { type: string }
+      responses:
+        "201": { description: Created }
+        "401": { description: Unauthorized }
+        "503": { description: Database unavailable }
+
+  /api/bookings/user:
+    get:
+      tags: [Bookings]
+      summary: List bookings for authenticated user
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: OK }
+
+  /api/bookings/batch:
+    post:
+      tags: [Bookings]
+      summary: Fetch bookings by id list (guest history)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/bookings/{id}/status:
+    patch:
+      tags: [Bookings]
+      summary: Update booking status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [pending, confirmed, cancelled, completed] }
+                guestPhone: { type: string, description: Required for guest cancellations }
+      responses:
+        "200": { description: OK }
+
+  /api/businesses:
+    get:
+      tags: [Businesses]
+      summary: List businesses
+    post:
+      tags: [Businesses]
+      summary: Create business (admin auth)
+      security: [{ bearerAuth: [] }]
+
+  /api/businesses/{id}:
+    get:
+      tags: [Businesses]
+      summary: Get one business
+    put:
+      tags: [Businesses]
+      security: [{ bearerAuth: [] }]
+    delete:
+      tags: [Businesses]
+      security: [{ bearerAuth: [] }]
+
+  /api/business/register:
+    post:
+      tags: [Businesses]
+      summary: Owner registration (pending approval)
+
+  /api/reviews:
+    post:
+      tags: [Reviews]
+      summary: Submit review (auth)
+      security: [{ bearerAuth: [] }]
+
+  /api/reviews/{businessId}:
+    get:
+      tags: [Reviews]
+      summary: List reviews for business
+
+  /api/providers/nearby:
+    get:
+      tags: [Public]
+      summary: Hyperlocal provider search
+
+  /api/auth/owner/login:
+    post:
+      tags: [Owner]
+      summary: Owner login
+
+  /api/owner/business:
+    get:
+      tags: [Owner]
+      summary: Get owner business
+    patch:
+      tags: [Owner]
+      summary: Update owner business
+
+  /api/owner/bookings:
+    get:
+      tags: [Owner]
+      summary: Owner bookings
+
+  /api/owner/bookings/{id}:
+    patch:
+      tags: [Owner]
+      summary: Update booking status (owner)
+
+  /api/owner/analytics:
+    get:
+      tags: [Owner]
+      summary: Owner analytics series
+
+  /api/owner/availability:
+    get:
+      tags: [Owner]
+      summary: Get availability calendar
+    patch:
+      tags: [Owner]
+      summary: Update availability
+
+  /api/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Dashboard stats
+      parameters:
+        - name: x-api-key
+          in: header
+          schema: { type: string }
+
+  /api/admin/bookings:
+    get:
+      tags: [Admin]
+      summary: All bookings
+
+  /api/admin/businesses/pending:
+    get:
+      tags: [Admin]
+      summary: Pending approval queue
+    patch:
+      tags: [Admin]
+      summary: Approve or reject listing
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List Firebase Auth users
+
+  /api/admin/users/{uid}:
+    patch:
+      tags: [Admin]
+      summary: Enable/disable user
+
+  /api/admin/reviews:
+    get:
+      tags: [Admin]
+      summary: Review moderation queue
+    patch:
+      tags: [Admin]
+      summary: Hide/flag review
+
+  /api/analytics/track:
+    post:
+      tags: [Public]
+      summary: Track WhatsApp/call/view
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

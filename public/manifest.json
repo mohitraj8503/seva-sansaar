@@ -1,0 +1,17 @@
+{
+  "name": "Connectia | Private Space",
+  "short_name": "Connectia",
+  "description": "An intimate, private space for Mohit & Rishika.",
+  "start_url": "/en/connectia",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#7340FF",
+  "icons": [
+    {
+      "src": "/seva-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
