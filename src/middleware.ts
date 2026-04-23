@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 import { updateSession } from './utils/supabase/middleware';
@@ -11,7 +11,7 @@ const intlMiddleware = createMiddleware(routing);
 export default async function middleware(req: NextRequest) {
   // 1. Update/Refresh Supabase Session
   // This helper should return a response object with updated cookies
-  const supabaseResponse = await updateSession(req);
+  await updateSession(req);
 
   const { pathname } = req.nextUrl;
 

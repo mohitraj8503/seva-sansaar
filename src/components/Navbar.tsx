@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Languages } from "lucide-react";
 import { clsx } from "clsx";
 import { DEFAULT_CITY } from "@/lib/constants";
+import { sessionManager } from "@/lib/sessionManager";
 
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -58,6 +59,15 @@ export default function Navbar() {
   const submitNavSearch = (e: FormEvent) => {
     e.preventDefault();
     goSearch();
+  };
+
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (sessionManager.isSessionValid()) {
+      router.push('/connectia');
+    } else {
+      router.push('/login');
+    }
   };
 
   // Close drawer on Escape key
@@ -195,8 +205,8 @@ export default function Navbar() {
             <Link href="/list-business" className={navLinkClass}>
               {t("listBusiness")}
             </Link>
-            <Link
-              href="/login"
+            <button
+              onClick={handleLoginClick}
               className={`rounded-full px-8 py-3 text-xs font-black uppercase tracking-widest transition-all duration-500 transform hover:scale-105 active:scale-95 ${
                 onHero
                   ? "bg-white text-navy shadow-xl shadow-white/10"
@@ -204,7 +214,7 @@ export default function Navbar() {
               }`}
             >
                {t("login")}
-            </Link>
+            </button>
           </nav>
 
           <div className="ml-auto flex items-center gap-1 md:ml-0 lg:hidden">
@@ -263,9 +273,12 @@ export default function Navbar() {
               <Link href="/list-business" className="rounded-xl px-4 py-3 hover:bg-seva-offwhite" onClick={() => setDrawerOpen(false)}>
                 {t("listBusiness")}
               </Link>
-              <Link href="/login" className="mt-4 rounded-full bg-navy px-4 py-3.5 text-center text-white shadow-lg shadow-navy/20" onClick={() => setDrawerOpen(false)}>
+              <button 
+                onClick={(e) => { setDrawerOpen(false); handleLoginClick(e); }} 
+                className="mt-4 rounded-full bg-navy px-4 py-3.5 text-center text-white shadow-lg shadow-navy/20 font-black uppercase tracking-widest text-[10px]"
+              >
                 {t("login")}
-              </Link>
+              </button>
             </nav>
             <div className="mt-auto border-t border-gray-200 p-4">
               <label htmlFor="drawer-search" className="text-xs font-bold uppercase tracking-wide text-gray-500">Quick search</label>
