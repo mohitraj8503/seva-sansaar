@@ -15,13 +15,14 @@ interface CallInterfaceProps {
 }
 
 export const CallInterface = ({ currentUser, targetUser, type, onClose, incomingCall }: CallInterfaceProps) => {
-  const [status, setStatus] = useState<'ringing' | 'connecting' | 'connected' | 'ended' | 'rejected'>(
-    type === 'outgoing' ? 'ringing' : 'connecting'
+  const [status, setStatus] = useState<'calling' | 'ringing' | 'connecting' | 'connected' | 'ended' | 'rejected' | 'missed'>(
+    type === 'outgoing' ? 'calling' : 'ringing'
   );
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(true);
   const [timer, setTimer] = useState(0);
   const [callId, setCallId] = useState<string | null>(incomingCall?.id || null);
+  const [isLogCreated, setIsLogCreated] = useState(false);
 
   const supabase = createClient();
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -129,18 +130,47 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
     }
   };
 
+  const createCallLog = async (finalStatus: string, duration: number) => {
+    if (isLogCreated) return;
+    setIsLogCreated(true);
+    
+    let logStatus = 'ended';
+    if (finalStatus === 'missed') logStatus = 'missed';
+    if (finalStatus === 'rejected') logStatus = 'declined';
+    
+    const durationText = duration > 0 ? `${Math.floor(duration / 60)}m ${duration % 60}s` : '';
+
+    await supabase.from('messages').insert({
+      sender_id: type === 'outgoing' ? currentUser.id : targetUser.id,
+      receiver_id: type === 'outgoing' ? targetUser.id : currentUser.id,
+      text: logStatus === 'missed' ? 'Missed call' : 
+            logStatus === 'declined' ? 'Call declined' : 
+            `Call ended • ${durationText}`,
+      type: 'call',
+      status: 'seen'
+    });
+  };
+
   const endCall = async () => {
+    const finalStatus = timer === 0 && status !== 'connected' ? 'missed' : 'ended';
+    
     if (callId) {
-      await supabase.from('calls').update({ status: 'ended' }).eq('id', callId);
+      await supabase.from('calls').update({ 
+        status: finalStatus,
+        ended_at: new Date().toISOString()
+      }).eq('id', callId);
     }
+
+    await createCallLog(finalStatus, timer);
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
     }
     if (pcRef.current) {
       pcRef.current.close();
     }
-    setStatus('ended');
-    setTimeout(onClose, 1000);
+    setStatus(finalStatus as 'ended' | 'missed');
+    setTimeout(onClose, 2000);
   };
 
   const handleReject = async () => {
@@ -184,10 +214,12 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
         <div className="text-center">
           <h2 className="text-2xl font-bold">{targetUser.name}</h2>
           <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-1">
-            {status === 'ringing' ? 'Calling...' : 
+            {status === 'calling' ? 'Calling...' :
+             status === 'ringing' ? 'Ringing...' : 
              status === 'connecting' ? 'Connecting...' : 
              status === 'connected' ? formatTime(timer) : 
-             status === 'rejected' ? 'Call Rejected' : 'Call Ended'}
+             status === 'rejected' ? 'Call Rejected' : 
+             status === 'missed' ? 'Missed Call' : 'Call Ended'}
           </p>
         </div>
       </div>
@@ -215,7 +247,7 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
           </button>
 
           <button 
-            onClick={endCall}
+            onClick={status === 'ringing' ? handleReject : endCall}
             className="w-20 h-20 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl shadow-rose-500/20 active:scale-90 transition-all"
           >
             <PhoneOff size={32} />

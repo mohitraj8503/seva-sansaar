@@ -16,7 +16,7 @@ export interface Message {
   id: string;
   text: string;
   file_url: string | null;
-  type: 'text' | 'image' | 'audio' | 'file' | 'video';
+  type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call';
   sender_id: string; 
   receiver_id: string;
   status: 'sent' | 'delivered' | 'seen' | 'sending' | 'failed';
@@ -34,7 +34,7 @@ export interface Call {
   id: string;
   caller_id: string;
   receiver_id: string;
-  status: 'ringing' | 'accepted' | 'rejected' | 'ended';
+  status: 'calling' | 'ringing' | 'accepted' | 'rejected' | 'ended' | 'missed';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   offer: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

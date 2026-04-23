@@ -236,6 +236,17 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
              </div>
           )}
 
+          {message.type === 'call' && (
+            <div className="flex items-center gap-3 py-1">
+              <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center", message.text.includes('Missed') || message.text.includes('declined') ? "bg-rose-500/20 text-rose-500" : "bg-green-500/20 text-green-500")}>
+                <Phone size={14} fill="currentColor" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black uppercase tracking-widest">{message.text}</span>
+              </div>
+            </div>
+          )}
+
           {reactions.length > 0 && <div className="absolute -bottom-2.5 right-1 flex items-center bg-white border border-gray-100 px-1.5 py-0.5 rounded-full shadow-sm scale-90">{Array.from(new Set(reactions.map(r => r[1]))).map((e, idx) => <span key={idx} className="text-[11px]">{e}</span>)}{reactions.length > 1 && <span className="text-[9px] font-bold text-gray-500 ml-0.5">{reactions.length}</span>}</div>}
           {isStarred && <Star size={10} className="absolute -top-1.5 -left-1.5 text-yellow-500 fill-yellow-500" />}
 
@@ -672,7 +683,7 @@ export default function SevaSansaarApp() {
     }
   };
 
-  const sendMessage = useCallback(async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' = 'text', fileUrl?: string, retryId?: string) => {
+  const sendMessage = useCallback(async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call' = 'text', fileUrl?: string, retryId?: string) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
     if (!text.trim() && !fileUrl) return;
     vibrate(10);
@@ -1168,13 +1179,37 @@ export default function SevaSansaarApp() {
                 </AnimatePresence>
 
                 {isSearchOpen && (
-                  <div className="bg-black p-4 flex items-center gap-3 border-b border-white/5">
+                  <div className="bg-black p-4 flex items-center gap-3 border-b border-white/5 sticky top-[90px] z-[60]">
                     <div className="flex-1 bg-white/5 rounded-full px-4 py-2 flex items-center gap-2">
                       <Search size={16} className="text-white/30" />
-                      <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="bg-transparent text-sm text-white outline-none flex-1" />
+                      <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search messages..." className="bg-transparent text-sm text-white outline-none flex-1" />
                       {searchResults.length > 0 && <span className="text-[10px] font-bold text-white/30 uppercase">{searchIndex + 1} of {searchResults.length}</span>}
                     </div>
-                    <div className="flex gap-2"><button onClick={() => setSearchIndex(prev => (prev - 1 + searchResults.length) % searchResults.length)} className="text-white/30 hover:text-white"><ChevronUp size={20} /></button><button onClick={() => setSearchIndex(prev => (prev + 1) % searchResults.length)} className="text-white/30 hover:text-white"><ChevronDown size={20} /></button><button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-white/30 hover:text-white"><X size={20} /></button></div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const nextIdx = (searchIndex - 1 + searchResults.length) % searchResults.length;
+                          setSearchIndex(nextIdx);
+                          const msgId = searchResults[nextIdx];
+                          document.querySelector(`[data-msg-id="${msgId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }} 
+                        className="text-white/30 hover:text-white"
+                      >
+                        <ChevronUp size={20} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const nextIdx = (searchIndex + 1) % searchResults.length;
+                          setSearchIndex(nextIdx);
+                          const msgId = searchResults[nextIdx];
+                          document.querySelector(`[data-msg-id="${msgId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }} 
+                        className="text-white/30 hover:text-white"
+                      >
+                        <ChevronDown size={20} />
+                      </button>
+                      <button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-white/30 hover:text-white"><X size={20} /></button>
+                    </div>
                   </div>
                 )}
 
@@ -1304,8 +1339,38 @@ export default function SevaSansaarApp() {
                 <AnimatePresence>
                   {showMediaGallery && (
                     <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="absolute inset-0 bg-black z-[100] flex flex-col">
-                      <header className="p-6 pt-10 flex items-center justify-between bg-black/80 border-b border-white/5"><div onClick={() => setShowMediaGallery(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white"><X size={24} /></div><h2 className="text-white font-bold">Media</h2><div className="w-10" /></header>
-                      <div className="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2">{messages.filter(m => m.type === 'image' && m.file_url).map(m => (<div key={m.id} className="aspect-square bg-white/5 rounded-lg overflow-hidden"><img src={m.file_url!} className="w-full h-full object-cover" /></div>))}</div>
+                      <header className="p-6 pt-12 flex items-center justify-between bg-black/80 border-b border-white/5">
+                        <div onClick={() => setShowMediaGallery(false)} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white"><X size={24} /></div>
+                        <h2 className="text-white font-black uppercase tracking-widest text-sm">Media & Docs</h2>
+                        <div className="w-10" />
+                      </header>
+                      
+                      <div className="flex bg-black border-b border-white/5">
+                        {['Images', 'Videos', 'Docs'].map(tab => (
+                          <button 
+                            key={tab}
+                            onClick={() => (window as any)._setMediaTab?.(tab)}
+                            className="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all relative group"
+                          >
+                            {tab}
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 scale-x-0 group-hover:scale-x-100 transition-transform" />
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2">
+                        {messages.filter(m => (m.type === 'image' || m.type === 'video' || m.type === 'file') && m.file_url).map(m => (
+                          <div key={m.id} className="aspect-square bg-white/5 rounded-lg overflow-hidden relative group" onClick={() => { if(m.type === 'image') setShowLightbox(true); }}>
+                            {m.type === 'image' ? (
+                              <Image src={m.file_url!} alt="Media" fill className="object-cover" />
+                            ) : m.type === 'video' ? (
+                              <div className="w-full h-full flex items-center justify-center bg-indigo-500/10"><Play size={20} className="text-white" /></div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-white/5"><FileText size={20} className="text-white/20" /></div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
                   {showSpecialDates && (
