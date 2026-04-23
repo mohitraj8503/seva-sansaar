@@ -328,7 +328,7 @@ export default function SevaSansaarApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState<'typing' | 'recording' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -340,6 +340,7 @@ export default function SevaSansaarApp() {
   const [searchIndex, setSearchIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [activeMediaTab, setActiveMediaTab] = useState<'Images' | 'Videos' | 'Docs'>('Images');
   const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
   const [starredIds, setStarredIds] = useState<string[]>([]);
   const [showSpecialDates, setShowSpecialDates] = useState(false);
@@ -402,6 +403,7 @@ export default function SevaSansaarApp() {
       mediaRecorder.start(250);
 
       setIsRecording(true);
+      handleTyping('recording');
       setRecordingSeconds(0);
 
       recordingIntervalRef.current = setInterval(() => {
@@ -430,6 +432,7 @@ export default function SevaSansaarApp() {
     }
 
     setIsRecording(false);
+    handleTyping(null);
     setIsUploadingAudio(true);
 
     return new Promise<void>((resolve) => {
@@ -631,12 +634,23 @@ export default function SevaSansaarApp() {
     if (el.scrollTop === 0 && hasMore && !isFetchingOlder) fetchOlderMessages();
   };
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior });
-      setUnreadCount(0);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingSentRef = useRef<number>(0);
+
+  const handleTyping = (state?: 'typing' | 'recording' | null) => {
+    if (isUnlocked && channelRef.current) {
+      const now = Date.now();
+      // Throttle typing events to once every 2 seconds
+      if (now - lastTypingSentRef.current < 2000 && state === 'typing') return;
+      lastTypingSentRef.current = now;
+
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: currentUser?.id, state: state || null }
+      });
     }
-  }, []);
+  };
   const scrollToBottomRef = useRef(scrollToBottom);
   useEffect(() => { scrollToBottomRef.current = scrollToBottom; }, [scrollToBottom]);
 
@@ -673,15 +687,12 @@ export default function SevaSansaarApp() {
     setIsFetchingOlder(false);
   };
 
-  const handleTyping = (isTyping: boolean) => {
-    if (isUnlocked && channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { userId: currentUser?.id, isTyping }
-      });
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior });
+      setUnreadCount(0);
     }
-  };
+  }, []);
 
   const sendMessage = useCallback(async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call' = 'text', fileUrl?: string, retryId?: string) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
@@ -780,10 +791,13 @@ export default function SevaSansaarApp() {
     }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
       const nm = payload.new as Message; 
       setMessages(prev => prev.map(m => m.id === nm.id ? nm : m));
-    }).on('broadcast', { event: 'typing' }, (p: { payload: { userId: string, isTyping: boolean } }) => { 
+    }).on('broadcast', { event: 'typing' }, (p: { payload: { userId: string, state: 'typing' | 'recording' | null } }) => { 
       if (p.payload.userId === activePartner.id) { 
-        setOtherUserTyping(p.payload.isTyping); 
-        if (p.payload.isTyping) setTimeout(() => setOtherUserTyping(false), 3000); 
+        setOtherUserTyping(p.payload.state || null); 
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        if (p.payload.state) {
+          typingTimeoutRef.current = setTimeout(() => setOtherUserTyping(null), 3000); 
+        }
       } 
     }).subscribe(async (s) => { 
       if (s === 'SUBSCRIBED') await channel.track({ key: currentUser.id, online_at: new Date().toISOString() }); 
@@ -1252,7 +1266,7 @@ export default function SevaSansaarApp() {
                           ))}
                        </div>
                      ))}
-                     {otherUserTyping && <TypingIndicator />}
+                     {otherUserTyping && <TypingIndicator state={otherUserTyping} />}
                      <div ref={scrollRef} className="h-4 w-full shrink-0" />
                   </div>
 
@@ -1346,20 +1360,28 @@ export default function SevaSansaarApp() {
                       </header>
                       
                       <div className="flex bg-black border-b border-white/5">
-                        {['Images', 'Videos', 'Docs'].map(tab => (
+                        {(['Images', 'Videos', 'Docs'] as const).map(tab => (
                           <button 
                             key={tab}
-                            onClick={() => (window as any)._setMediaTab?.(tab)}
-                            className="flex-1 py-4 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all relative group"
+                            onClick={() => setActiveMediaTab(tab)}
+                            className={clsx(
+                              "flex-1 py-4 text-[10px] font-bold uppercase tracking-widest transition-all relative group",
+                              activeMediaTab === tab ? "text-indigo-500" : "text-white/40 hover:text-white"
+                            )}
                           >
                             {tab}
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 scale-x-0 group-hover:scale-x-100 transition-transform" />
+                            <div className={clsx("absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 transition-transform", activeMediaTab === tab ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100")} />
                           </button>
                         ))}
                       </div>
 
                       <div className="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2">
-                        {messages.filter(m => (m.type === 'image' || m.type === 'video' || m.type === 'file') && m.file_url).map(m => (
+                        {messages.filter(m => {
+                          if (activeMediaTab === 'Images') return m.type === 'image';
+                          if (activeMediaTab === 'Videos') return m.type === 'video';
+                          if (activeMediaTab === 'Docs') return m.type === 'file';
+                          return false;
+                        }).filter(m => m.file_url).map(m => (
                           <div key={m.id} className="aspect-square bg-white/5 rounded-lg overflow-hidden relative group" onClick={() => { if(m.type === 'image') setShowLightbox(true); }}>
                             {m.type === 'image' ? (
                               <Image src={m.file_url!} alt="Media" fill className="object-cover" />
@@ -1558,12 +1580,17 @@ export default function SevaSansaarApp() {
   );
 }
 
-const TypingIndicator = () => (
+const TypingIndicator = ({ state }: { state: 'typing' | 'recording' }) => (
   <div className="flex gap-1 items-center px-6 py-2">
-    <div className="flex gap-1 bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-none">
-      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-      <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-1 bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-none">
+        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+      </div>
+      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+        {state === 'recording' ? 'Recording audio...' : 'Typing...'}
+      </span>
     </div>
   </div>
 );
