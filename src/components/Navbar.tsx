@@ -48,7 +48,7 @@ export default function Navbar() {
     document.documentElement.style.fontSize = `${px}px`;
   };
 
-  const onHero = !scrolled;
+  const onHero = !scrolled || isLogin;
 
   const goSearch = () => {
     const q = navQuery.trim();
@@ -85,6 +85,7 @@ export default function Navbar() {
     ? "text-sm font-semibold text-white drop-shadow-sm transition hover:text-white/90"
     : "text-sm font-semibold text-gray-500 transition hover:text-navy";
 
+  const isLogin = pathname?.includes("/login");
   const isConnectia = pathname?.includes("/connectia");
   if (isConnectia) return null;
 
@@ -92,7 +93,7 @@ export default function Navbar() {
     <header className="fixed top-0 z-[100] w-full">
       <div className="tricolor-stripe h-[3px] w-full shrink-0" aria-hidden />
 
-      <div className={`text-white transition-colors duration-500 ${scrolled ? "bg-navy/95 backdrop-blur-sm" : "bg-transparent"}`}>
+      <div className={`text-white transition-colors duration-500 ${(scrolled && !isLogin) ? "bg-navy/95 backdrop-blur-sm" : "bg-transparent"}`}>
         <div className="mx-auto flex h-7 max-w-7xl items-center justify-between px-4 text-[10px] font-medium tracking-wider sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <span className="opacity-80">🇮🇳 भारत सरकार</span>
@@ -141,7 +142,7 @@ export default function Navbar() {
 
       <div
         className={`transition-all duration-500 ease-in-out border-b ${
-          scrolled
+          (scrolled && !isLogin)
             ? "bg-white/95 shadow-md backdrop-blur-md border-gray-100 py-2 h-[75px]"
             : "bg-transparent border-transparent py-4 h-[100px]"
         }`}
@@ -153,7 +154,7 @@ export default function Navbar() {
 
           <div
             className={`mx-auto hidden min-w-0 max-w-lg flex-1 items-stretch rounded-full border transition-all duration-500 md:flex ${
-              scrolled
+              (scrolled && !isLogin)
                 ? "border-gray-200 bg-gray-50/50"
                 : "border-white/20 bg-white/10 backdrop-blur-md"
             }`}
