@@ -1016,8 +1016,10 @@ export default function SevaSansaarApp() {
               <motion.div key="w" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center bg-black p-10">
                  <div className="mb-auto mt-20 w-80 h-80 relative"><Image src="/welcome-bg.png" alt="Welcome" fill className="object-contain" /></div>
                  <div className="mb-10 text-center">
+                    <h2 className="text-xl font-black text-white/90 tracking-[0.3em] uppercase mb-8">SevaSansaar</h2>
                     <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">SEVA SANSAAR APP</p>
                     <h1 className="text-[34px] font-bold text-white leading-tight mb-4">Conversations that matter.</h1>
+                    <p className="text-white/40 text-sm mb-10 max-w-[280px] mx-auto">Stay close, no matter the distance. SevaSansaar is built for real connections.</p>
                     <button onClick={() => setView('list')} className="w-full h-[58px] rounded-[1.2rem] bg-[#FEF3C7] text-black font-bold text-[15px] flex items-center justify-center gap-2">Get Started <ArrowRight size={18} /></button>
                  </div>
               </motion.div>
