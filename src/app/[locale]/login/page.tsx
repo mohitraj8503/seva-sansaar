@@ -7,7 +7,6 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { sessionManager } from "@/lib/sessionManager";
 import { chatLock } from "@/lib/chatLock";
-import Image from "next/image";
 
 // --- THE VAULT (Hardcoded for Undercover Mode) ---
 const ALLOWED = [

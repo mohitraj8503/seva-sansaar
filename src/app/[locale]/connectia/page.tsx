@@ -8,7 +8,7 @@ import {
   Loader2, Paperclip, X, Trash2, Reply, Smile, AlertCircle, Download, 
   Lock, Unlock, Image as ImageIcon, ChevronUp, ChevronDown, Heart,
   Copy, Star, Forward, Check, Camera, FileText, Play, Pause, ExternalLink, Maximize2,
-  User, Bell, Phone, Settings, VolumeX, Search, Calendar, Volume2, ArrowDown
+  User, Bell, Phone, Settings, VolumeX, Search, Calendar, Volume2, ArrowDown, Home
 } from 'lucide-react';
 import Image from "next/image";
 import { useRouter } from '@/i18n/navigation';
@@ -594,6 +594,22 @@ export default function SevaSansaarApp() {
   // --- HAPTICS ---
   const vibrate = (pattern: number | number[]) => { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(pattern); };
 
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`);
+      }
+    };
+    window.visualViewport?.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('scroll', handleResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
+
   // --- SCROLL LOGIC ---
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -993,7 +1009,10 @@ export default function SevaSansaarApp() {
   if (!currentUser) return null;
 
   return (
-    <div className="h-[100dvh] w-full flex items-center justify-center bg-black overflow-hidden font-sans select-none overscroll-none">
+    <div 
+      className="w-full flex items-center justify-center bg-black overflow-hidden font-sans select-none overscroll-none"
+      style={{ height: viewportHeight }}
+    >
       <AnimatePresence>{toast && <Toast message={toast} onClear={() => setToast(null)} />}</AnimatePresence>
       <AnimatePresence>
         {activeCall && (
@@ -1096,7 +1115,7 @@ export default function SevaSansaarApp() {
             )}
 
             {view === 'chat' && (
-              <motion.div key="c" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full bg-black relative">
+              <motion.div key="c" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full bg-black relative overflow-hidden">
                 <header className="p-6 pt-10 safe-top flex items-center justify-between shrink-0 bg-black z-20">
                   <div className="flex items-center gap-4">
                      <div onClick={() => setView('list')} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white"><ChevronLeft size={24} /></div>
@@ -1157,13 +1176,15 @@ export default function SevaSansaarApp() {
                      backgroundImage: wallpaperUrl ? `url(${wallpaperUrl})` : (wallpaper || 'none'),
                      backgroundColor: !wallpaperUrl && !wallpaper ? '#ffffff' : 'transparent',
                      backgroundSize: 'cover',
-                     backgroundPosition: 'center'
+                     backgroundPosition: 'center',
+                     display: 'flex',
+                     flexDirection: 'column'
                    }}
                  >
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide pb-20" onScroll={handleScroll}>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide pb-4" onScroll={handleScroll}>
                      {isFetchingOlder && <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /></div>}
                      {messages.length === 0 && !isFetchingOlder && (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-20 mt-20">
+                        <div className="flex-1 flex flex-col items-center justify-center text-center opacity-20 my-20">
                           <MessageCircle size={60} className="mb-4" />
                           <p className="font-bold uppercase tracking-widest text-[10px]">No messages yet</p>
                         </div>
@@ -1189,7 +1210,7 @@ export default function SevaSansaarApp() {
                        </div>
                      ))}
                      {otherUserTyping && <TypingIndicator />}
-                     <div ref={scrollRef} />
+                     <div ref={scrollRef} className="h-4 w-full shrink-0" />
                   </div>
 
                   <AnimatePresence>
@@ -1201,7 +1222,7 @@ export default function SevaSansaarApp() {
                     )}
                   </AnimatePresence>
 
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-30">
+                  <div className="p-4 bg-white/95 backdrop-blur-md border-t border-gray-100 z-30 sticky bottom-0 safe-area-bottom">
                      <AnimatePresence>
                         {showAttachmentMenu && (
                           <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="absolute bottom-20 left-4 bg-white rounded-3xl shadow-2xl p-2 flex flex-col gap-1 border border-gray-100 z-50">
@@ -1375,34 +1396,27 @@ export default function SevaSansaarApp() {
                 key="d" 
                 initial={{ opacity: 0, x: 50 }} 
                 animate={{ opacity: 1, x: 0 }} 
-                className="flex-1 flex flex-col bg-black overflow-y-auto scrollbar-hide max-w-[420px] mx-auto w-full"
+                className="flex-1 flex flex-col bg-black overflow-y-auto scrollbar-hide w-full"
                 style={{ 
-                  transform: 'translateZ(0)', 
-                  paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)',
+                  height: '100dvh',
+                  paddingBottom: 'calc(env(safe-area-inset-bottom) + 90px)',
                   WebkitOverflowScrolling: 'touch'
                 }}
               >
-                 <header className="p-6 pt-10 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-md z-50 border-b border-white/5">
-                    <div onClick={() => setView('list')} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-white/10 active:scale-90 transition-all touch-manipulation"><ChevronLeft size={24} /></div>
+                 <header className="p-6 pt-12 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-md z-50 border-b border-white/5">
+                    <div onClick={() => setView('list')} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white cursor-pointer active:scale-90 transition-all"><ChevronLeft size={24} /></div>
                     <h1 className="text-white font-black text-lg uppercase tracking-widest">My Profile</h1>
                     <div className="w-12" />
                  </header>
 
                  <div className="flex flex-col items-center pt-8 px-6 space-y-10">
                     <ProfileAvatar user={currentUser} onUpdate={(url) => setCurrentUser(prev => prev ? ({ ...prev, avatar_url: url }) : null)} />
-                    
                     <ProfileInfo user={currentUser} onUpdate={setCurrentUser} />
-                    
                     <RelationshipStats />
-
                     <AppearanceSettings user={currentUser} onUpdate={(data) => setCurrentUser(prev => prev ? ({ ...prev, ...data }) : null)} />
-
                     <PrivacySecurity user={currentUser} onUpdate={(data) => setCurrentUser(prev => prev ? ({ ...prev, ...data }) : null)} onTriggerLockSetup={() => setShowSetup(true)} />
-
                     <ChatStats user={currentUser} />
-
                     <DangerZone user={currentUser} />
-
                     <button 
                       onClick={() => setShowLogoutConfirm(true)}
                       className="w-full bg-rose-500/10 p-6 rounded-[2.5rem] flex items-center justify-center gap-4 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-all font-bold mb-10"
@@ -1410,51 +1424,61 @@ export default function SevaSansaarApp() {
                       <LogOut size={22} /> Logout Session
                     </button>
                  </div>
+              </motion.div>
+            )}
 
-                 {/* LOGOUT CONFIRMATION SHEET */}
-                 <AnimatePresence>
-                   {showLogoutConfirm && (
-                     <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-end"
-                        onClick={() => setShowLogoutConfirm(false)}
-                     >
-                       <motion.div 
-                          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                          className="w-full bg-white rounded-t-[3rem] p-10 flex flex-col gap-6"
-                          onClick={e => e.stopPropagation()}
-                       >
-                         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto" />
-                         <div className="text-center space-y-2">
-                           <h3 className="text-2xl font-black text-gray-900">End Session?</h3>
-                           <p className="text-gray-500 text-sm">You&apos;ll need to log in again to access the chat.</p>
-                         </div>
-                         <div className="flex flex-col gap-3 mt-4">
-                            <button 
-                              onClick={async () => {
-                                await supabase.auth.signOut();
-                                sessionStorage.removeItem('chat_lock_session_unlocked');
-                                router.replace("/login");
-                              }}
-                              className="w-full h-16 bg-rose-500 rounded-3xl text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-rose-500/20"
-                            >
-                              Yes, Logout
-                            </button>
-                            <button 
-                              onClick={() => setShowLogoutConfirm(false)}
-                              className="w-full h-16 bg-gray-100 rounded-3xl text-gray-900 font-black uppercase tracking-widest text-xs"
-                            >
-                              Cancel
-                            </button>
-                         </div>
-                       </motion.div>
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
+            {view === 'calls' && (
+              <motion.div 
+                key="calls" 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="flex-1 flex flex-col bg-black w-full"
+                style={{ height: '100dvh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 90px)' }}
+              >
+                <header className="p-6 pt-12 flex items-center justify-between border-b border-white/5 bg-black/50 backdrop-blur-xl">
+                  <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Calls</h1>
+                  <button className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white"><Phone size={20} /></button>
+                </header>
+                <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-4">
+                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-white/20"><Phone size={40} /></div>
+                  <h3 className="text-white font-bold">No Recent Calls</h3>
+                  <p className="text-white/40 text-xs max-w-[200px]">Voice and video calls will appear here once you start a conversation.</p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {/* CONNECTIA BOTTOM NAV (MOBILE) */}
+        <AnimatePresence>
+          {['list', 'calls', 'details'].includes(view) && (
+            <motion.nav 
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-[100] safe-area-bottom md:hidden"
+            >
+              <div className="flex justify-around items-center h-[70px] px-6">
+                <button onClick={() => window.location.href = '/'} className="flex flex-col items-center gap-1 text-white/40">
+                  <Home size={22} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
+                </button>
+                <button onClick={() => setView('list')} className={clsx("flex flex-col items-center gap-1", view === 'list' ? "text-indigo-500" : "text-white/40")}>
+                  <MessageCircle size={22} fill={view === 'list' ? "currentColor" : "none"} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Chats</span>
+                </button>
+                <button onClick={() => setView('calls')} className={clsx("flex flex-col items-center gap-1", view === 'calls' ? "text-indigo-500" : "text-white/40")}>
+                  <Phone size={22} fill={view === 'calls' ? "currentColor" : "none"} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Calls</span>
+                </button>
+                <button onClick={() => setView('details')} className={clsx("flex flex-col items-center gap-1", view === 'details' ? "text-indigo-500" : "text-white/40")}>
+                  <User size={22} fill={view === 'details' ? "currentColor" : "none"} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+                </button>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
 
       <style jsx>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
     </div>

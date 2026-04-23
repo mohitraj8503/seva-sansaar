@@ -47,6 +47,9 @@ export default function Navbar() {
     document.documentElement.style.fontSize = `${px}px`;
   };
 
+  const isLogin = pathname?.includes("/login");
+  const isConnectia = pathname?.includes("/connectia");
+
   const onHero = !scrolled || isLogin;
 
   const goSearch = () => {
@@ -84,8 +87,6 @@ export default function Navbar() {
     ? "text-sm font-semibold text-white drop-shadow-sm transition hover:text-white/90"
     : "text-sm font-semibold text-gray-500 transition hover:text-navy";
 
-  const isLogin = pathname?.includes("/login");
-  const isConnectia = pathname?.includes("/connectia");
   if (isConnectia) return null;
 
   return (
