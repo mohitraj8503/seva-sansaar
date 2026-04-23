@@ -9,6 +9,7 @@ import { Languages } from "lucide-react";
 import { clsx } from "clsx";
 import { DEFAULT_CITY } from "@/lib/constants";
 import { sessionManager } from "@/lib/sessionManager";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
 
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -147,20 +148,7 @@ export default function Navbar() {
       >
         <div className="mx-auto flex h-full max-w-7xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
           <Link href="/" className="shrink-0 rounded-lg focus-visible:outline-offset-4 active:scale-95 transition-transform">
-            <div className={`relative transition-all duration-500 ${
-              scrolled
-                ? "h-10 w-[140px] sm:h-12 sm:w-[160px]"
-                : "h-14 w-[180px] sm:h-20 sm:w-[240px]"
-            }`}>
-              <Image
-                src="/logo-horizontal.png"
-                alt="Seva Sansaar"
-                fill
-                className="object-contain object-left transition-all duration-500"
-                sizes="(max-width: 640px) 160px, 240px"
-                priority
-              />
-            </div>
+            <AnimatedLogo size={scrolled ? "sm" : "md"} priority />
           </Link>
 
           <div

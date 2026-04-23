@@ -29,3 +29,15 @@ export interface Message {
   edited_at?: string;
   deleted_by?: string[];
 }
+
+export interface Call {
+  id: string;
+  caller_id: string;
+  receiver_id: string;
+  status: 'ringing' | 'accepted' | 'rejected' | 'ended';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  offer: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  answer: any;
+  created_at: string;
+}

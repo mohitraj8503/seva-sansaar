@@ -89,8 +89,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Connectia",
+    statusBarStyle: "default",
+    title: "Seva Sansaar",
   },
   formatDetection: {
     telephone: false,
@@ -98,11 +98,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#7340FF",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({

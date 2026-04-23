@@ -1,9 +1,9 @@
 import { hashPIN, verifyPIN } from './pinHash';
 
 const getKeys = (userId: string) => ({
-  LOCK_KEY: `connectia_pin_hash_${userId}`,
-  ATTEMPTS_KEY: `connectia_pin_attempts_${userId}`,
-  LOCKOUT_KEY: `connectia_lockout_until_${userId}`
+  LOCK_KEY: `sevasansaar_pin_hash_${userId}`,
+  ATTEMPTS_KEY: `sevasansaar_pin_attempts_${userId}`,
+  LOCKOUT_KEY: `sevasansaar_lockout_until_${userId}`
 });
 
 export const chatLock = {
@@ -74,5 +74,24 @@ export const chatLock = {
     const keys = getKeys(userId);
     const attempts = parseInt(localStorage.getItem(keys.ATTEMPTS_KEY) || '0');
     return Math.max(0, 5 - attempts);
+  },
+
+  updateLastActive(userId: string): void {
+    if (!userId || typeof window === 'undefined') return;
+    localStorage.setItem(`sevasansaar_last_active_${userId}`, Date.now().toString());
+  },
+
+  shouldLock(userId: string): boolean {
+    if (!userId || typeof window === 'undefined') return false;
+    if (!this.isLocked(userId)) return false;
+    
+    const lastActive = localStorage.getItem(`sevasansaar_last_active_${userId}`);
+    if (!lastActive) return true; // Lock if no history
+
+    const SESSION_DURATION = 5 * 60 * 1000; // 5 minutes inactivity session
+    const now = Date.now();
+    const idleTime = now - parseInt(lastActive);
+    
+    return idleTime > SESSION_DURATION;
   }
 };

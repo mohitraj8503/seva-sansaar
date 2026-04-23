@@ -50,9 +50,16 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
   };
 
   const updatePreference = async (field: string, value: boolean) => {
+    if (!user?.id) {
+      console.error("UPDATE ERROR: User ID is missing");
+      return;
+    }
     if (field === 'show_last_seen') setShowLastSeen(value);
     if (field === 'show_online_status') setShowOnline(value);
-    await supabase.from('profiles').update({ [field]: value }).eq('id', user.id);
+    const { error } = await supabase.from('profiles').update({ [field]: value }).eq('id', user.id);
+    if (error) {
+      console.log(`UPDATE ${field.toUpperCase()} ERROR:`, error);
+    }
   };
 
   return (

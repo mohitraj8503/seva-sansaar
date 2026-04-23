@@ -26,17 +26,32 @@ export const AppearanceSettings = ({ user, onUpdate }: { user: Profile, onUpdate
   }, []);
 
   const toggleTheme = async () => {
+    if (!user?.id) {
+      console.error("UPDATE ERROR: User ID is missing");
+      return;
+    }
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    await supabase.from('profiles').update({ theme: newTheme }).eq('id', user.id);
-    onUpdate({ ...user, theme: newTheme });
+    const { error } = await supabase.from('profiles').update({ theme: newTheme }).eq('id', user.id);
+    if (error) {
+      console.error("UPDATE THEME ERROR:", error);
+    } else {
+      onUpdate({ ...user, theme: newTheme });
+    }
   };
 
   const changeAccent = async (color: { key: string; value: string }) => {
+    if (!user?.id) {
+      console.error("UPDATE ERROR: User ID is missing");
+      return;
+    }
     setAccent(color.key);
     localStorage.setItem('connectia_accent_color', color.key);
     document.documentElement.style.setProperty('--accent', color.value);
-    await supabase.from('profiles').update({ accent_color: color.key }).eq('id', user.id);
+    const { error } = await supabase.from('profiles').update({ accent_color: color.key }).eq('id', user.id);
+    if (error) {
+      console.error("UPDATE ACCENT ERROR:", error);
+    }
   };
 
   return (

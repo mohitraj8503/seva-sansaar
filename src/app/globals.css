@@ -258,3 +258,54 @@
     opacity: 1 !important;
   }
 }
+/* App-like feel utilities */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+.overscroll-none {
+  overscroll-behavior: none;
+}
+
+.touch-none {
+  touch-action: none;
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Fix for 100dvh on mobile browsers */
+.h-screen-d {
+  height: 100vh; /* Fallback */
+  height: 100dvh;
+}
+
+/* Smooth message pop animation */
+@keyframes messagePop {
+  from { transform: scale(0.9) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.message-animate {
+  animation: messagePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Button click feedback */
+.tap-scale:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}

@@ -13,7 +13,7 @@ interface Stats {
   activeHour: string;
 }
 
-export const ChatStats = ({ user }: { user: { id: string } }) => {
+export const ChatStats = React.memo(({ user }: { user: { id: string } }) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -27,10 +27,10 @@ export const ChatStats = ({ user }: { user: { id: string } }) => {
       const { data: firstMsg } = await supabase.from('messages').select('created_at').order('created_at', { ascending: true }).limit(1).single();
 
       setStats({
-        sent: sent || 0,
-        received: received || 0,
-        images: images || 0,
-        voice: voice || 0,
+        sent: sent ?? 0,
+        received: received ?? 0,
+        images: images ?? 0,
+        voice: voice ?? 0,
         firstDate: firstMsg?.created_at,
         activeHour: '10 PM' // Placeholder for complex aggregation
       });
@@ -83,4 +83,5 @@ export const ChatStats = ({ user }: { user: { id: string } }) => {
       </div>
     </div>
   );
-};
+});
+ChatStats.displayName = 'ChatStats';

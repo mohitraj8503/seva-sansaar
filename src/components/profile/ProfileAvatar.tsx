@@ -2,11 +2,11 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import { Camera, Loader2, Trash2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { Profile } from '@/types';
-
-// Profile interface moved to @/types
+import { clsx } from 'clsx';
 
 export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (url: string) => void }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -23,6 +23,7 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
     setUploadProgress(10);
 
     try {
+      // Image compression logic can be added here too if needed
       const path = `${user.id}/avatar-${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -52,7 +53,11 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
 
   const removePhoto = async () => {
     try {
-      await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+      const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+      if (error) {
+        console.error("REMOVE PHOTO ERROR:", error);
+        return;
+      }
       onUpdate("");
       setShowOptions(false);
     } catch (err) { console.error(err); }
@@ -61,16 +66,16 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
   return (
     <div className="relative group">
       <div 
-        className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 relative cursor-pointer"
+        className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 relative cursor-pointer tap-scale"
         style={{ transform: 'translateZ(0)', willChange: 'transform' }}
         onContextMenu={(e) => { e.preventDefault(); setShowOptions(true); }}
         onClick={() => setShowOptions(true)}
       >
-        <img 
+        <Image 
           src={user.avatar_url || "/default-avatar.png"} 
           alt={user.name || "User Avatar"}
-          loading="lazy"
-          className={clsx("w-full h-full object-cover transition-transform duration-200 ease-out group-hover:scale-110", isUploading && "opacity-50 blur-sm")} 
+          fill
+          className={clsx("object-cover transition-transform duration-200 ease-out group-hover:scale-110", isUploading && "opacity-50 blur-sm")} 
         />
         {isUploading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
@@ -81,8 +86,8 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
       </div>
 
       <button 
-        onClick={() => fileInputRef.current?.click()}
-        className="absolute bottom-1 right-1 bg-indigo-600 p-3 rounded-full border-4 border-black text-white hover:scale-110 active:scale-95 transition-all shadow-lg touch-manipulation"
+        onClick={() => { window.dispatchEvent(new CustomEvent('picking_file')); fileInputRef.current?.click(); }}
+        className="absolute bottom-1 right-1 bg-indigo-600 p-3 rounded-full border-4 border-black text-white tap-scale transition-all shadow-lg touch-manipulation"
       >
         <Camera size={16} />
       </button>
@@ -109,7 +114,7 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
                 <h3 className="font-bold text-gray-900">Profile Photo</h3>
               </div>
               <div className="flex flex-col py-2">
-                <button onClick={() => { fileInputRef.current?.click(); setShowOptions(false); }} className="px-6 py-4 hover:bg-gray-50 flex items-center gap-4 text-sm font-bold text-gray-700">
+                <button onClick={() => { window.dispatchEvent(new CustomEvent('picking_file')); fileInputRef.current?.click(); setShowOptions(false); }} className="px-6 py-4 hover:bg-gray-50 flex items-center gap-4 text-sm font-bold text-gray-700">
                   <Camera size={20} className="text-indigo-600" /> Change Photo
                 </button>
                 <button onClick={removePhoto} className="px-6 py-4 hover:bg-rose-50 flex items-center gap-4 text-sm font-bold text-rose-500">
@@ -126,5 +131,3 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
     </div>
   );
 };
-
-const clsx = (...classes: (string | boolean | undefined | null)[]) => classes.filter(Boolean).join(' ');

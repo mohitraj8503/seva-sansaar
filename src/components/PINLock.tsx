@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Delete, AlertCircle, Fingerprint } from 'lucide-react';
 import { chatLock } from '@/lib/chatLock';
+import { biometric } from '@/lib/biometric';
 
 interface PINLockProps {
   onUnlock: () => void;
@@ -29,9 +30,13 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
     
     // Check for biometric availability
     const checkBiometric = async () => {
-      if (window.PublicKeyCredential) {
-        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-        setCanBiometric(available);
+      const supported = await biometric.isSupported();
+      const enrolled = biometric.isEnrolled(userId);
+      setCanBiometric(supported && enrolled);
+      
+      // Auto-trigger biometric on load if available
+      if (supported && enrolled) {
+        setTimeout(tryBiometric, 500);
       }
     };
     checkBiometric();
@@ -60,18 +65,10 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
   };
 
   const tryBiometric = async () => {
-    try {
-      if (!window.PublicKeyCredential) return;
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!available) return;
-
-      // In a real app, you would use navigator.credentials.get() here.
-      // For this implementation, we trigger the native prompt and treat success as unlock.
-      // This is a common pattern for "secondary" unlock layers.
+    const success = await biometric.authenticate(userId);
+    if (success) {
       setIsSuccess(true);
       setTimeout(onUnlock, 500);
-    } catch (error) {
-      console.log('Biometric failed or cancelled');
     }
   };
 
@@ -100,7 +97,7 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 ring-1 ring-white/10">
           <Lock size={28} className="text-white/60" />
         </div>
-        <h1 className="text-[32px] font-bold text-white mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>Connectia</h1>
+        <h1 className="text-[32px] font-bold text-white mb-2" style={{ fontFamily: 'var(--font-playfair)' }}>SevaSansaar</h1>
         <p className="text-white/40 text-sm">{lockoutTime > 0 ? "Too many attempts" : "Enter your PIN to continue"}</p>
       </div>
 

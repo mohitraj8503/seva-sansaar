@@ -10,6 +10,7 @@ import {
   Copy, Star, Forward, Check, Camera, FileText, Play, Pause, ExternalLink, Maximize2,
   User, Bell, Phone, Settings, VolumeX, Search, Calendar, Volume2, ArrowDown
 } from 'lucide-react';
+import Image from "next/image";
 import { useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
@@ -19,7 +20,8 @@ import confetti from 'canvas-confetti';
 
 // --- NEW IMPORTS ---
 import { chatLock } from '@/lib/chatLock';
-import { Profile, Message } from '@/types';
+import { Profile, Message, Call } from '@/types';
+import { CallInterface } from '@/components/CallInterface';
 import { PINLock } from '@/components/PINLock';
 import { PINSetup } from '@/components/PINSetup';
 import { sessionManager } from '@/lib/sessionManager';
@@ -30,6 +32,7 @@ import { PrivacySecurity } from '@/components/profile/PrivacySecurity';
 import { RelationshipStats } from '@/components/profile/RelationshipStats';
 import { ChatStats } from '@/components/profile/ChatStats';
 import { DangerZone } from '@/components/profile/DangerZone';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 // --- TYPES & INTERFACES ---
 // Centralized types moved to @/types
@@ -91,7 +94,7 @@ const LinkPreview = ({ url }: { url: string }) => {
 
   return (
     <a href={data.url} target="_blank" rel="noopener noreferrer" className="mt-2 block bg-white/10 rounded-xl overflow-hidden hover:bg-white/20 transition-colors group">
-      {data.image && <img src={data.image} alt="Preview" className="w-full h-32 object-cover" />}
+      {data.image && <div className="w-full h-32 relative"><Image src={data.image} alt="Preview" fill className="object-cover" /></div>}
       <div className="p-3">
         <h4 className="text-[11px] font-bold text-white truncate group-hover:text-indigo-300 transition-colors">{data.title}</h4>
         {data.description && <p className="text-[9px] text-white/60 line-clamp-2 mt-1">{data.description}</p>}
@@ -152,7 +155,7 @@ const Lightbox = ({ src, onClose }: { src: string, onClose: () => void }) => (
        <button className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white"><Download size={24} /></button>
     </header>
     <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex-1 flex items-center justify-center">
-       <img src={src} alt="Lightbox" className="max-w-full max-h-full object-contain rounded-lg" />
+       <div className="relative w-full h-full"><Image src={src} alt="Lightbox" fill className="object-contain" /></div>
     </motion.div>
   </motion.div>
 );
@@ -205,7 +208,7 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
         >
           {message.type === 'image' && (
             <div className="relative rounded-xl overflow-hidden mb-2 max-w-[240px] group/img" onClick={() => setShowLightbox(true)}>
-               <img src={message.file_url!} alt="Sent" className="w-full h-auto" />
+               <div className="relative w-full aspect-[4/3]"><Image src={message.file_url!} alt="Sent" fill className="object-cover" /></div>
                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center"><Maximize2 className="text-white" /></div>
             </div>
           )}
@@ -306,9 +309,9 @@ interface SpecialDate {
 
 // --- MAIN APP ---
 
-export default function LoveLinkApp() {
+export default function SevaSansaarApp() {
   const supabase = createClient();
-  const [view, setView] = useState<'welcome' | 'list' | 'chat' | 'details'>('welcome');
+  const [view, setView] = useState<'welcome' | 'list' | 'chat' | 'details' | 'calls'>('welcome');
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [chatProfiles, setChatProfiles] = useState<Profile[]>([]);
   const [activePartner, setActivePartner] = useState<Profile | null>(null);
@@ -565,9 +568,15 @@ export default function LoveLinkApp() {
   const [isFetchingOlder, setIsFetchingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  const isOpeningSystemUI = useRef(false);
+
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Calling States
+  const [activeCall, setActiveCall] = useState<{ type: 'outgoing' | 'incoming', target: Profile, call?: Call } | null>(null);
+  const [recentCalls, setRecentCalls] = useState<Call[]>([]);
 
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -602,6 +611,11 @@ export default function LoveLinkApp() {
       setUnreadCount(0);
     }
   }, []);
+  const scrollToBottomRef = useRef(scrollToBottom);
+  useEffect(() => { scrollToBottomRef.current = scrollToBottom; }, [scrollToBottom]);
+
+  const showScrollBottomRef = useRef(showScrollBottom);
+  useEffect(() => { showScrollBottomRef.current = showScrollBottom; }, [showScrollBottom]);
 
   // Force scroll to bottom on view change or messages load
   useEffect(() => {
@@ -643,7 +657,7 @@ export default function LoveLinkApp() {
     }
   };
 
-  const sendMessage = async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' = 'text', fileUrl?: string, retryId?: string) => {
+  const sendMessage = useCallback(async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' = 'text', fileUrl?: string, retryId?: string) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
     if (!text.trim() && !fileUrl) return;
     vibrate(10);
@@ -660,20 +674,26 @@ export default function LoveLinkApp() {
         setEditingMessage(null); return;
       }
       const { data, error } = await supabase.from('messages').insert([{ sender_id: currentUser.id, receiver_id: activePartner.id, text, type, file_url: fileUrl || null, status: 'sent', reply_to: retryId ? messages.find(m => m.id === retryId)?.reply_to : replyTo?.id }]).select().single();
-      if (error) throw error;
+      if (error) {
+        console.error('Message insert error:', error);
+        throw error;
+      }
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
-    } catch (err) { setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m)); }
-  };
+    } catch (err) {
+      console.error('sendMessage exception:', err);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m));
+    }
+  }, [isUnlocked, currentUser, activePartner, replyTo, editingMessage, messages, supabase, scrollToBottom]);
 
-  const handleReact = async (messageId: string, emoji: string) => {
+  const handleReact = useCallback(async (messageId: string, emoji: string) => {
     const msg = messages.find(m => m.id === messageId);
     if (!msg || !currentUser) return;
     const reactions = { ...(msg.reactions || {}) };
     reactions[currentUser.id] = emoji;
     await supabase.from('messages').update({ reactions }).eq('id', messageId);
-  };
+  }, [messages, currentUser, supabase]);
 
-  const handleDeleteMe = async (messageId: string) => {
+  const handleDeleteMe = useCallback(async (messageId: string) => {
     if (!currentUser) return;
     const msg = messages.find(m => m.id === messageId);
     const deleted_by = [...(msg?.deleted_by || [])];
@@ -682,21 +702,21 @@ export default function LoveLinkApp() {
       await supabase.from('messages').update({ deleted_by }).eq('id', messageId);
       setMessages(prev => prev.filter(m => m.id !== messageId));
     }
-  };
+  }, [currentUser, messages, supabase]);
 
-  const handleDeleteEveryone = async (messageId: string) => {
+  const handleDeleteEveryone = useCallback(async (messageId: string) => {
     await supabase.from('messages').update({ is_deleted: true, text: 'This message was deleted' }).eq('id', messageId);
-  };
+  }, [supabase]);
 
-  const handleCopy = (text: string) => {
+  const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
     setToast("Copied to clipboard");
-  };
+  }, []);
 
-  const handleStar = (messageId: string) => {
+  const handleStar = useCallback((messageId: string) => {
     setStarredIds(prev => prev.includes(messageId) ? prev.filter(id => id !== messageId) : [...prev, messageId]);
-    setToast(starredIds.includes(messageId) ? "Unstarred" : "Starred");
-  };
+    setToast(prev => starredIds.includes(messageId) ? "Unstarred" : "Starred");
+  }, [starredIds]);
 
   const handleExportChat = () => {
     const chatContent = messages.map(m => `[${m.created_at}] ${m.sender_id === currentUser?.id ? 'Me' : activePartner?.name}: ${m.text}`).join('\n');
@@ -708,10 +728,10 @@ export default function LoveLinkApp() {
     a.click();
   };
 
-  const handleSeen = async (messageId: string) => {
+  const handleSeen = useCallback(async (messageId: string) => {
     setMessages(prev => prev.map(m => m.id === messageId ? { ...m, status: 'seen', seen: true } : m));
     await supabase.from('messages').update({ status: 'seen', seen: true }).eq('id', messageId);
-  };
+  }, [supabase]);
 
   useEffect(() => {
     if (!isUnlocked || !currentUser || !activePartner) return;
@@ -723,8 +743,13 @@ export default function LoveLinkApp() {
         vibrate([5, 50, 5]);
         setMessages(prev => prev.some(m => m.id === nm.id) ? prev : [...prev, nm]); 
         supabase.from('messages').update({ status: 'delivered' }).eq('id', nm.id).then(); 
-        if (showScrollBottom) setUnreadCount(prev => prev + 1);
-        else setTimeout(() => scrollToBottom(), 100);
+        if (showScrollBottomRef.current) setUnreadCount(prev => prev + 1);
+        else setTimeout(() => scrollToBottomRef.current(), 100);
+      }
+    }).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUser.id}` }, (payload) => {
+      const nm = payload.new as Message;
+      if (nm.receiver_id === activePartner.id) {
+        setMessages(prev => prev.some(m => m.id === nm.id) ? prev.map(m => m.id === nm.id ? nm : m) : [...prev, nm]);
       }
     }).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
       const nm = payload.new as Message; 
@@ -734,18 +759,66 @@ export default function LoveLinkApp() {
         setOtherUserTyping(p.payload.isTyping); 
         if (p.payload.isTyping) setTimeout(() => setOtherUserTyping(false), 3000); 
       } 
-    }).on('presence', { event: 'sync' }, () => { 
-      setOnlineUsers(Object.values(channel.presenceState()).map((p: unknown[]) => (p[0] as { key: string })?.key)); 
     }).subscribe(async (s) => { 
       if (s === 'SUBSCRIBED') await channel.track({ key: currentUser.id, online_at: new Date().toISOString() }); 
     });
-    return () => { supabase.removeChannel(channel); channelRef.current = null; };
-  }, [currentUser, activePartner, supabase, showScrollBottom, isUnlocked, scrollToBottom]);
+
+    // CALL SIGNALING LISTENER
+    const callChannel = supabase.channel('call-signals')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'calls', 
+        filter: `receiver_id=eq.${currentUser.id}` 
+      }, (payload) => {
+        const nc = payload.new as Call;
+        if (nc.status === 'ringing') {
+          const caller = chatProfiles.find(p => p.id === nc.caller_id);
+          if (caller) {
+            vibrate([100, 50, 100, 50, 100]);
+            setActiveCall({ type: 'incoming', target: caller, call: nc });
+          }
+        }
+      })
+      .subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      supabase.removeChannel(callChannel);
+      channelRef.current = null; 
+    };
+  }, [currentUser, activePartner, supabase, isUnlocked, chatProfiles]);
+
+  const compressImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_SIZE = 1200;
+        if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+        else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.8);
+      };
+    });
+  };
 
   const uploadFile = async (file: File, type: string) => {
     if (!currentUser) return { publicUrl: null };
+    
+    let fileToUpload: File | Blob = file;
+    if (file.type.startsWith('image/')) {
+      fileToUpload = await compressImage(file);
+    }
+
     const path = `${currentUser.id}/${type}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-    const { error } = await supabase.storage.from('chat-media').upload(path, file);
+    const { error } = await supabase.storage.from('chat-media').upload(path, fileToUpload);
     if (error) return { publicUrl: null };
     const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
     return { publicUrl: data.publicUrl };
@@ -782,14 +855,21 @@ export default function LoveLinkApp() {
       try {
         const { data: { user: au } } = await supabase.auth.getUser(); 
         if (!au || !sessionManager.isSessionValid()) { 
-          router.replace("/login"); 
+          window.location.href = "https://sevasansaar.live/";
           return; 
         }
         
         const { data: profiles } = await supabase.from('profiles').select('*');
         if (profiles) {
-          const me = profiles.find(p => p.id === au.id); if (me) { setCurrentUser(me); await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', me.id); }
-          const others = profiles.filter(p => p.id !== au.id); setChatProfiles(others); if (others.length > 0 && !activePartner) setActivePartner(others[0]);
+          const me = profiles.find(p => p.id === au.id); 
+          if (me) { 
+            setCurrentUser(me); 
+            const { error: lsError } = await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', me.id); 
+            if (lsError) console.error("LAST SEEN UPDATE ERROR:", lsError);
+          }
+          const others = profiles.filter(p => p.id !== au.id); 
+          setChatProfiles(others); 
+          if (others.length > 0 && !activePartner) setActivePartner(others[0]);
         }
         const { data: sDates } = await supabase.from('special_dates').select('*'); if (sDates) setSpecialDates(sDates);
       } catch (err) { console.error(err); } finally { setIsLoading(false); }
@@ -799,17 +879,20 @@ export default function LoveLinkApp() {
   // INACTIVITY LOCK
   useEffect(() => {
     if (!isUnlocked) return;
-    const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
     let timer: NodeJS.Timeout;
 
     const resetTimer = () => {
+      if (currentUser?.id) chatLock.updateLastActive(currentUser.id);
       clearTimeout(timer);
       timer = setTimeout(() => {
-        setIsUnlocked(false);
+        if (currentUser?.id && chatLock.isLocked(currentUser.id)) {
+          setIsUnlocked(false);
+        }
       }, INACTIVITY_TIMEOUT);
     };
 
-    const events = ['mousedown', 'touchstart', 'keypress', 'scroll'];
+    const events = ['mousedown', 'touchstart', 'keypress', 'scroll', 'click'];
     events.forEach(e => window.addEventListener(e, resetTimer));
     resetTimer();
 
@@ -819,26 +902,33 @@ export default function LoveLinkApp() {
     };
   }, [isUnlocked]);
 
-  // AUTO-LOCK ON EVERY EXIT
+  // SMART AUTO-LOCK ON RESUME
   useEffect(() => {
-    const lockApp = () => setIsUnlocked(false);
-    const handleVisibilityChange = () => { if (document.visibilityState === 'hidden') lockApp(); };
-    const handleBlur = () => lockApp();
+    const handleStateChange = () => {
+      if (document.visibilityState === 'visible' && currentUser?.id) {
+        if (!isOpeningSystemUI.current && chatLock.shouldLock(currentUser.id)) {
+          setIsUnlocked(false);
+        }
+      } else if (document.visibilityState === 'hidden' && currentUser?.id) {
+        chatLock.updateLastActive(currentUser.id);
+      }
+    };
     
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('beforeunload', lockApp);
-    window.addEventListener('pagehide', lockApp);
-    document.addEventListener('freeze', lockApp);
+    const handleSystemUI = () => { isOpeningSystemUI.current = true; };
+    const handleFocus = () => { setTimeout(() => { isOpeningSystemUI.current = false; }, 500); };
+
+    document.addEventListener('visibilitychange', handleStateChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('picking_file', handleSystemUI);
+    window.addEventListener('opening_camera', handleSystemUI);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('beforeunload', lockApp);
-      window.removeEventListener('pagehide', lockApp);
-      document.removeEventListener('freeze', lockApp);
+      document.removeEventListener('visibilitychange', handleStateChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('picking_file', handleSystemUI);
+      window.removeEventListener('opening_camera', handleSystemUI);
     };
-  }, []);
+  }, [currentUser?.id]);
 
   const searchParams = useSearchParams();
   const mustSetupPIN = searchParams.get('setup_pin') === 'true';
@@ -878,11 +968,24 @@ export default function LoveLinkApp() {
     return groups;
   }, [messages, currentUser?.id]);
 
+  const lastMessages = useMemo(() => {
+    const map: Record<string, Message> = {};
+    messages.forEach(m => {
+      const partnerId = m.sender_id === currentUser?.id ? m.receiver_id : m.sender_id;
+      if (!map[partnerId] || new Date(m.created_at) > new Date(map[partnerId].created_at)) {
+        map[partnerId] = m;
+      }
+    });
+    return map;
+  }, [messages, currentUser?.id]);
+
   if (isLoading) return <div className="h-screen w-full flex flex-col items-center justify-center bg-black gap-4"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin" /><p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Synchronizing...</p></div>;
   
   if (!isUnlocked) {
     const userId = currentUser?.id || sessionManager.getUserId() || '';
-    if (mustSetupPIN || !chatLock.isLocked(userId)) {
+    const hasPin = chatLock.isLocked(userId);
+    
+    if (mustSetupPIN || !hasPin) {
       return <PINSetup onComplete={() => setIsUnlocked(true)} userId={userId} />;
     }
     return <PINLock onUnlock={() => setIsUnlocked(true)} userId={userId} />;
@@ -891,19 +994,30 @@ export default function LoveLinkApp() {
   if (!currentUser) return null;
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-black overflow-hidden font-sans select-none">
+    <div className="h-[100dvh] w-full flex items-center justify-center bg-black overflow-hidden font-sans select-none overscroll-none">
       <AnimatePresence>{toast && <Toast message={toast} onClear={() => setToast(null)} />}</AnimatePresence>
+      <AnimatePresence>
+        {activeCall && (
+          <CallInterface 
+            currentUser={currentUser} 
+            targetUser={activeCall.target} 
+            type={activeCall.type} 
+            incomingCall={activeCall.call}
+            onClose={() => setActiveCall(null)} 
+          />
+        )}
+      </AnimatePresence>
 
       <div onClick={handlePanicTap} className="fixed top-0 left-0 w-11 h-11 z-[999] cursor-default" />
 
-      {(
+
         <div className="w-full max-w-[412px] h-full bg-black relative flex flex-col shadow-2xl overflow-hidden">
           <AnimatePresence mode="wait">
             {view === 'welcome' && (
               <motion.div key="w" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center bg-black p-10">
-                 <div className="mb-auto mt-20 w-80 h-80"><img src="/welcome-bg.png" alt="Welcome" className="w-full h-full object-contain" /></div>
+                 <AnimatedLogo size="lg" className="mb-auto mt-20" />
                  <div className="mb-10 text-center">
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">LOVE LINK APP</p>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">SEVA SANSAAR APP</p>
                     <h1 className="text-[34px] font-bold text-white leading-tight mb-4">Conversations that matter.</h1>
                     <button onClick={() => setView('list')} className="w-full h-[58px] rounded-[1.2rem] bg-[#FEF3C7] text-black font-bold text-[15px] flex items-center justify-center gap-2">Get Started <ArrowRight size={18} /></button>
                  </div>
@@ -912,13 +1026,13 @@ export default function LoveLinkApp() {
 
             {view === 'list' && (
               <motion.div key="l" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full overflow-hidden">
-                <header className="p-6 pt-10 flex flex-col gap-6 shrink-0 bg-black">
+                <header className="p-6 pt-10 safe-top flex flex-col gap-6 shrink-0 bg-black">
                    <div className="flex justify-between items-center"><div className="flex flex-col"><p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">WELCOME BACK</p><h1 className="text-2xl font-bold text-white">{currentUser.name}</h1></div><div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white/40"><Bell size={20} /></div></div>
                    <div className="flex gap-4 overflow-x-auto scrollbar-hide">
                       <div className="flex flex-col items-center gap-2 shrink-0"><div className="w-[52px] h-[52px] rounded-full border border-dashed border-white/20 flex items-center justify-center text-white/30"><Plus size={20} /></div><span className="text-[10px] font-bold text-white/30">Add</span></div>
                       {[currentUser, ...chatProfiles].map(u => (
                         <div key={u.id} className="flex flex-col items-center gap-2 shrink-0" onClick={() => u.id !== currentUser.id && (setActivePartner(u), setView('chat'))}>
-                          <div className="relative"><img src={u.avatar_url || "/default-avatar.png"} className={clsx("w-[52px] h-[52px] rounded-full object-cover border-2", u.id === currentUser.id ? "border-white/10" : "border-[#FEF3C7]")} />{onlineUsers.includes(u.id) && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black" />}</div>
+                          <div className="relative w-[52px] h-[52px] rounded-full overflow-hidden border-2 border-transparent"><Image src={u.avatar_url || "/default-avatar.png"} fill className="object-cover" alt={u.name} />{onlineUsers.includes(u.id) && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black" />}</div>
                           <span className="text-[10px] font-bold text-white/60">{u.id === currentUser.id ? "You" : u.name.split(' ')[0]}</span>
                         </div>
                       ))}
@@ -927,28 +1041,86 @@ export default function LoveLinkApp() {
                 <div className="flex-1 bg-white rounded-t-[3rem] p-6 overflow-y-auto scrollbar-hide">
                    <h2 className="text-black text-xl font-bold mb-6">Recent Chat</h2>
                    {chatProfiles.map(u => (
-                     <div key={u.id} onClick={() => { setActivePartner(u); setView('chat'); }} className="flex items-center gap-4 py-4 border-b border-gray-50">
-                        <div className="relative"><img src={u.avatar_url || "/default-avatar.png"} className="w-14 h-14 rounded-full object-cover" />{onlineUsers.includes(u.id) && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />}</div>
-                        <div className="flex-1 min-w-0"><h3 className="font-bold text-black text-base">{u.name}</h3><p className="text-sm truncate text-gray-500">{messages.filter(m => m.sender_id === u.id || m.receiver_id === u.id).slice(-1)[0]?.text || "Start a conversation..."}</p></div>
+                     <div key={u.id} onClick={() => { setActivePartner(u); setView('chat'); }} className="flex items-center gap-4 py-4 border-b border-gray-50 tap-scale">
+                        <div className="relative w-14 h-14 rounded-full overflow-hidden"><Image src={u.avatar_url || "/default-avatar.png"} alt={u.name} fill className="object-cover" />{onlineUsers.includes(u.id) && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />}</div>
+                        <div className="flex-1 min-w-0"><h3 className="font-bold text-black text-base">{u.name}</h3><p className="text-sm truncate text-gray-500">{lastMessages[u.id]?.text || "Start a conversation..."}</p></div>
                      </div>
                    ))}
                 </div>
-                <nav className="h-[84px] bg-black flex justify-around items-center px-10 pb-4"><Phone size={22} className="text-white/30" /><MessageCircle size={22} className="text-white" /><Settings size={22} className="text-white/30" onClick={() => setView('details')} /></nav>
+              </motion.div>
+            )}
+
+            {view === 'calls' && (
+              <motion.div key="ca" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full overflow-hidden">
+                <header className="p-6 pt-10 safe-top flex flex-col gap-6 shrink-0 bg-black">
+                   <div className="flex justify-between items-center">
+                     <div className="flex flex-col">
+                       <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">CALL HISTORY</p>
+                       <h1 className="text-2xl font-bold text-white">Recent Calls</h1>
+                     </div>
+                   </div>
+                </header>
+                <div className="flex-1 bg-white rounded-t-[3rem] p-6 overflow-y-auto scroll-touch hide-scrollbar">
+                   {chatProfiles.length === 0 ? (
+                     <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+                       <Phone size={40} className="mb-4" />
+                       <p className="text-[10px] font-bold uppercase tracking-widest">No recent calls</p>
+                     </div>
+                   ) : (
+                     chatProfiles.map(u => (
+                       <div key={u.id} className="flex items-center gap-4 py-4 border-b border-gray-50 tap-scale transition-all">
+                          <div className="w-12 h-12 rounded-full overflow-hidden relative">
+                            <Image src={u.avatar_url || "/default-avatar.png"} alt={u.name} fill className="object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-black text-base">{u.name}</h3>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold">Voice Call • Yesterday</p>
+                          </div>
+                          <button 
+                            onClick={() => setActiveCall({ type: 'outgoing', target: u })}
+                            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 tap-scale transition-colors"
+                          >
+                            <Phone size={18} />
+                          </button>
+                       </div>
+                     ))
+                   )}
+                </div>
+                <nav className="h-[84px] bg-black flex justify-around items-center px-10 pb-4 safe-bottom">
+                  <Phone size={22} className={clsx("transition-colors", (view as string) === 'calls' ? "text-white" : "text-white/30")} onClick={() => setView('calls')} />
+                  <MessageCircle size={22} className={clsx("transition-colors", (view as string) === 'list' ? "text-white" : "text-white/30")} onClick={() => setView('list')} />
+                  <Settings size={22} className={clsx("transition-colors", (view as string) === 'details' ? "text-white" : "text-white/30")} onClick={() => setView('details')} />
+                </nav>
               </motion.div>
             )}
 
             {view === 'chat' && (
               <motion.div key="c" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full bg-black relative">
-                <header className="p-6 pt-10 flex items-center justify-between shrink-0 bg-black z-20">
+                <header className="p-6 pt-10 safe-top flex items-center justify-between shrink-0 bg-black z-20">
                   <div className="flex items-center gap-4">
                      <div onClick={() => setView('list')} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white"><ChevronLeft size={24} /></div>
-                     <div className="relative"><img src={activePartner?.avatar_url || "/default-avatar.png"} className="w-10 h-10 rounded-full object-cover" />{onlineUsers.includes(activePartner?.id || '') && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />}</div>
-                     <div className="min-w-0">
-                        <h2 className="text-white font-bold text-sm leading-tight flex items-center gap-2">{activePartner?.name} {isMuted && <VolumeX size={12} className="text-white/20" />}</h2>
+                     <div className="flex flex-col items-center gap-1">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/10 relative">
+                           <Image src={activePartner?.avatar_url || "/default-avatar.png"} alt={activePartner?.name || ""} fill className="object-cover" />
+                        </div>
                         <p className={clsx("text-[9px] font-bold uppercase tracking-widest", onlineUsers.includes(activePartner?.id || '') ? "text-green-500" : "text-white/20")}>{onlineUsers.includes(activePartner?.id || '') ? 'Online' : 'Offline'}</p>
                      </div>
                   </div>
-                  <MoreVertical size={20} className="text-white/40 cursor-pointer" onClick={() => setShowMenu(!showMenu)} />
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => activePartner && setActiveCall({ type: 'outgoing', target: activePartner })}
+                      className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 tap-scale transition-all text-white/40"
+                    >
+                      <Phone size={20} />
+                    </button>
+                    <button 
+                      onClick={() => setShowMenu(!showMenu)} 
+                      className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 tap-scale transition-all text-white/40"
+                      aria-label="Menu"
+                    >
+                      <MoreVertical size={20} />
+                    </button>
+                  </div>
                 </header>
 
                 <AnimatePresence>
@@ -958,7 +1130,7 @@ export default function LoveLinkApp() {
                       <button onClick={() => { setShowMediaGallery(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><ImageIcon size={16} /> View Media</button>
                       <button onClick={() => { setShowSpecialDates(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Calendar size={16} /> Memories</button>
                       <button onClick={() => { setShowStarred(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Star size={16} /> Starred Messages</button>
-                      <button onClick={() => { setIsMuted(!isMuted); localStorage.setItem('lovelink_muted', !isMuted ? '1' : ''); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50">{isMuted ? <Volume2 size={16} /> : <VolumeX size={16} />} {isMuted ? 'Unmute' : 'Mute'}</button>
+                      <button onClick={() => { setIsMuted(!isMuted); localStorage.setItem('sevasansaar_muted', !isMuted ? '1' : ''); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50">{isMuted ? <Volume2 size={16} /> : <VolumeX size={16} />} {isMuted ? 'Unmute' : 'Mute'}</button>
                       <button onClick={() => { handleExportChat(); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Download size={16} /> Export Chat</button>
                       <button onClick={() => { if(currentUser && chatLock.isLocked(currentUser.id)) chatLock.disable(currentUser.id); else setShowSetup(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Lock size={16} /> {currentUser && chatLock.isLocked(currentUser.id) ? 'Disable Lock' : 'Lock Chat'}</button>
                       <button onClick={() => { setShowWallpaperSheet(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><ImageIcon size={16} /> Chat Wallpaper</button>
@@ -1032,10 +1204,10 @@ export default function LoveLinkApp() {
                      <AnimatePresence>
                         {showAttachmentMenu && (
                           <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="absolute bottom-20 left-4 bg-white rounded-3xl shadow-2xl p-2 flex flex-col gap-1 border border-gray-100 z-50">
-                             <button onClick={() => attachmentRef.current?.setAttribute('capture', 'environment')} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><Camera size={18} className="text-indigo-600" /> Camera</button>
-                             <button onClick={() => { attachmentRef.current?.removeAttribute('capture'); attachmentRef.current?.click(); }} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><ImageIcon size={18} className="text-indigo-600" /> Gallery</button>
-                             <button onClick={() => { attachmentRef.current?.click(); }} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><FileText size={18} className="text-indigo-600" /> Document</button>
-                             <input type="file" ref={attachmentRef} className="hidden" multiple onChange={(e) => handleFileSelect(e, 'file')} />
+                             <button onClick={() => { isOpeningSystemUI.current = true; attachmentRef.current?.setAttribute('capture', 'environment'); attachmentRef.current?.click(); }} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><Camera size={18} className="text-indigo-600" /> Camera</button>
+                             <button onClick={() => { isOpeningSystemUI.current = true; attachmentRef.current?.removeAttribute('capture'); attachmentRef.current?.click(); }} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><ImageIcon size={18} className="text-indigo-600" /> Gallery</button>
+                             <button onClick={() => { isOpeningSystemUI.current = true; attachmentRef.current?.removeAttribute('capture'); attachmentRef.current?.click(); }} className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 transition-all"><FileText size={18} className="text-indigo-600" /> Document</button>
+                             <input type="file" ref={attachmentRef} className="hidden" multiple onChange={(e) => { isOpeningSystemUI.current = false; handleFileSelect(e, 'file'); }} />
                           </motion.div>
                         )}
                      </AnimatePresence>
@@ -1084,10 +1256,10 @@ export default function LoveLinkApp() {
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                onMouseDown={startRecording}
-                                onMouseUp={stopRecording}
-                                onTouchStart={startRecording}
-                                onTouchEnd={stopRecording}
+                                onMouseDown={() => { isOpeningSystemUI.current = true; startRecording(); }}
+                                onMouseUp={() => { isOpeningSystemUI.current = false; stopRecording(); }}
+                                onTouchStart={() => { isOpeningSystemUI.current = true; startRecording(); }}
+                                onTouchEnd={() => { isOpeningSystemUI.current = false; stopRecording(); }}
                                 className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-200 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                               >
                                 <Mic size={20} />
@@ -1178,10 +1350,10 @@ export default function LoveLinkApp() {
 
                           <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 px-2">Custom Wallpaper</p>
-                            <label className="w-full h-32 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer group">
+                            <label className="w-full h-32 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer group" onClick={() => isOpeningSystemUI.current = true}>
                               <Camera size={24} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
                               <span className="text-xs font-bold text-gray-400">Tap to upload image</span>
-                              <input type="file" className="hidden" accept="image/*" onChange={handleWallpaperUpload} />
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => { isOpeningSystemUI.current = false; handleWallpaperUpload(e); }} />
                             </label>
                           </div>
                         </div>
@@ -1282,7 +1454,7 @@ export default function LoveLinkApp() {
             )}
           </AnimatePresence>
         </div>
-      )}
+
       <style jsx>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
     </div>
   );

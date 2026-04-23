@@ -11,7 +11,7 @@ interface SpecialDate {
   emoji: string;
 }
 
-export const RelationshipStats = () => {
+export const RelationshipStats = React.memo(() => {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [daysTogether, setDaysTogether] = useState(0);
   const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
@@ -119,4 +119,5 @@ export const RelationshipStats = () => {
       </div>
     </div>
   );
-};
+});
+RelationshipStats.displayName = 'RelationshipStats';

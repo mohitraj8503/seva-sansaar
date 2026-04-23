@@ -7,6 +7,7 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { sessionManager } from "@/lib/sessionManager";
 import { chatLock } from "@/lib/chatLock";
+import { AnimatedLogo } from "@/components/AnimatedLogo";
 
 // --- THE VAULT (Hardcoded for Undercover Mode) ---
 const ALLOWED = [
@@ -52,7 +53,7 @@ export default function LoginPage() {
     
     // Step 1 — Validate against allowed credentials only
     const match = ALLOWED.find(
-      c => (c.username === username || c.email === username) && c.password === password
+      c => (c.username.toLowerCase() === username.toLowerCase() || c.email.toLowerCase() === username.toLowerCase()) && c.password === password
     );
 
     if (!match) {
@@ -67,13 +68,20 @@ export default function LoginPage() {
       password: match.password,
     });
 
-    if (authError || !data.user) {
-      setError('Invalid credentials');
+    if (authError) {
+      console.error('Supabase Auth Error:', authError.message);
+      setError(authError.message === 'Invalid login credentials' ? 'Invalid credentials' : authError.message);
       setIsSubmitting(false);
       return;
     }
 
-    // Step 3 — Create 3-hour session
+    if (!data.user) {
+      setError('User not found');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Step 3 — Create 1-hour session
     sessionManager.createSession(data.user.id);
 
     // Step 4 — Redirect to chat (Force PIN setup if not exists)
@@ -95,8 +103,9 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm">
         <div className="rounded-[2.5rem] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-3xl transition-all duration-700 hover:border-white/20">
           <div className="mb-10 text-center flex flex-col items-center">
-            <h1 className="text-4xl font-light text-white tracking-tight">नमस्ते</h1>
-            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">Welcome back</p>
+            <AnimatedLogo size="md" className="mb-6" priority />
+            <h1 className="text-4xl font-black text-white tracking-tight">सेवा संसार</h1>
+            <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">Seva Sansaar Portal</p>
           </div>
 
           <form className="space-y-6" onSubmit={handleLogin} autoComplete="off">
