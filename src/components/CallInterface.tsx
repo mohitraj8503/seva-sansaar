@@ -157,7 +157,8 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
     if (callId) {
       await supabase.from('calls').update({ 
         status: finalStatus,
-        ended_at: new Date().toISOString()
+        ended_at: new Date().toISOString(),
+        duration_sec: timer
       }).eq('id', callId);
     }
 

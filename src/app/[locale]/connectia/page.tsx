@@ -20,7 +20,7 @@ import confetti from 'canvas-confetti';
 
 // --- NEW IMPORTS ---
 import { chatLock } from '@/lib/chatLock';
-import { Profile, Message, Call } from '@/types';
+import { Profile, Message, Call, CallLog } from '@/types';
 import { CallInterface } from '@/components/CallInterface';
 import { PINLock } from '@/components/PINLock';
 import { PINSetup } from '@/components/PINSetup';
@@ -618,7 +618,7 @@ export default function SevaSansaarApp() {
 
   // Calling States
   const [activeCall, setActiveCall] = useState<{ type: 'outgoing' | 'incoming', target: Profile, call?: Call } | null>(null);
-  const [recentCalls, setRecentCalls] = useState<Call[]>([]);
+  const [recentCalls, setRecentCalls] = useState<CallLog[]>([]);
 
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -926,8 +926,31 @@ export default function SevaSansaarApp() {
       window.location.href = '/'; 
     }
   };
-
   useEffect(() => {
+    const fetchCalls = async (profiles: Profile[]) => {
+      if (!currentUser) return;
+      const { data } = await supabase
+        .from('calls')
+        .select('*')
+        .or(`caller_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (data) {
+        const logs: CallLog[] = data.map(c => {
+          const isOutgoing = c.caller_id === currentUser.id;
+          const peerId = isOutgoing ? c.receiver_id : c.caller_id;
+          const peer = profiles.find(p => p.id === peerId) || profiles[0];
+          return {
+            ...c,
+            peer,
+            direction: isOutgoing ? 'outgoing' : 'incoming'
+          };
+        });
+        setRecentCalls(logs);
+      }
+    };
+
     const init = async () => {
       try {
         const { data: { user: au } } = await supabase.auth.getUser(); 
@@ -943,6 +966,7 @@ export default function SevaSansaarApp() {
             setCurrentUser(me); 
             const { error: lsError } = await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', me.id); 
             if (lsError) console.error("LAST SEEN UPDATE ERROR:", lsError);
+            fetchCalls(profiles);
           }
           const others = profiles.filter(p => p.id !== au.id); 
           setChatProfiles(others); 
@@ -1133,39 +1157,72 @@ export default function SevaSansaarApp() {
             )}
 
             {view === 'calls' && (
-              <motion.div key="ca" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full overflow-hidden">
-                <header className="p-6 pt-10 safe-top flex flex-col gap-6 shrink-0 bg-black">
+              <motion.div key="ca" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full overflow-hidden bg-black">
+                <header className="p-6 pt-10 safe-top flex flex-col gap-6 shrink-0">
                    <div className="flex justify-between items-center">
                      <div className="flex flex-col">
-                       <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">CALL HISTORY</p>
-                       <h1 className="text-2xl font-bold text-white">Recent Calls</h1>
+                       <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">CALL HISTORY</p>
+                       <h1 className="text-3xl font-bold text-white tracking-tight">Recent Calls</h1>
+                     </div>
+                     <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-indigo-400">
+                       <Phone size={22} />
                      </div>
                    </div>
                 </header>
-                <div className="flex-1 bg-white rounded-t-[3rem] p-6 overflow-y-auto scroll-touch hide-scrollbar">
-                   {chatProfiles.length === 0 ? (
-                     <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
-                       <Phone size={40} className="mb-4" />
-                       <p className="text-[10px] font-bold uppercase tracking-widest">No recent calls</p>
+                <div className="flex-1 bg-white rounded-t-[3rem] overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+                   {recentCalls.length === 0 ? (
+                     <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
+                       <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                         <Phone size={40} className="text-gray-200" />
+                       </div>
+                       <h3 className="text-xl font-bold text-black mb-2">No calls yet</h3>
+                       <p className="text-gray-400 text-sm mb-8 max-w-[200px]">Start a conversation by calling your friends.</p>
+                       <button onClick={() => setView('list')} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tap-scale shadow-lg shadow-indigo-200">Start a Call</button>
                      </div>
                    ) : (
-                     chatProfiles.map(u => (
-                       <div key={u.id} className="flex items-center gap-4 py-4 border-b border-gray-50 tap-scale transition-all">
-                          <div className="w-12 h-12 rounded-full overflow-hidden relative">
-                            <Image src={u.avatar_url || "/default-avatar.png"} alt={u.name} fill className="object-cover" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-black text-base">{u.name}</h3>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold">Voice Call • Yesterday</p>
-                          </div>
-                          <button 
-                            onClick={() => setActiveCall({ type: 'outgoing', target: u })}
-                            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 tap-scale transition-colors"
-                          >
-                            <Phone size={18} />
-                          </button>
-                       </div>
-                     ))
+                     <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide">
+                       {recentCalls.map(c => (
+                         <div key={c.id} className="flex items-center gap-4 py-4 border-b border-gray-50 group hover:bg-gray-50/50 rounded-2xl px-2 transition-colors">
+                           <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                             <Image src={c.peer?.avatar_url || "/default-avatar.png"} alt={c.peer?.name || ""} fill className="object-cover" />
+                           </div>
+                           
+                           <div className="flex-1 min-w-0">
+                             <h3 className="font-bold text-black text-[15px] mb-0.5 truncate">{c.peer?.name}</h3>
+                             <div className="flex items-center gap-1.5">
+                               <div className={clsx(
+                                 "w-3.5 h-3.5 rounded-full flex items-center justify-center",
+                                 c.status === 'missed' ? "text-rose-500" : "text-gray-400"
+                               )}>
+                                 <Phone size={10} fill="currentColor" className={c.direction === 'outgoing' ? "rotate-[-45deg]" : "rotate-[135deg]"} />
+                               </div>
+                               <span className={clsx(
+                                 "text-[11px] font-bold uppercase tracking-widest",
+                                 c.status === 'missed' ? "text-rose-500" : "text-gray-400"
+                               )}>
+                                 {c.status === 'missed' ? 'Missed Call' : c.status === 'rejected' ? 'Declined' : c.direction === 'outgoing' ? 'Outgoing' : 'Incoming'}
+                               </span>
+                               <span className="text-gray-300">•</span>
+                               <span className="text-[10px] font-bold text-gray-400 uppercase">{formatMsgTime(c.created_at)}</span>
+                             </div>
+                           </div>
+                           
+                           <div className="flex flex-col items-end gap-2 shrink-0">
+                             {c.duration_sec ? (
+                               <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                                 {Math.floor(c.duration_sec / 60)}m {c.duration_sec % 60}s
+                               </span>
+                             ) : null}
+                             <button 
+                               onClick={() => { setActivePartner(c.peer); setActiveCall({ type: 'outgoing', target: c.peer }); }}
+                               className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-indigo-600 hover:bg-indigo-50 tap-scale transition-colors"
+                             >
+                               <Phone size={18} />
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
                    )}
                 </div>
                 <nav className="h-[84px] bg-black flex justify-around items-center px-10 pb-4 safe-bottom">

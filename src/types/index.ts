@@ -35,9 +35,17 @@ export interface Call {
   caller_id: string;
   receiver_id: string;
   status: 'calling' | 'ringing' | 'accepted' | 'rejected' | 'ended' | 'missed';
+  type: 'audio' | 'video';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  offer: any;
+  offer?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  answer: any;
+  answer?: any;
   created_at: string;
+  ended_at?: string;
+  duration_sec?: number;
+}
+
+export interface CallLog extends Call {
+  peer: Profile;
+  direction: 'incoming' | 'outgoing';
 }
