@@ -125,4 +125,4 @@ export const PINSetup: React.FC<PINSetupProps> = ({ onComplete, userId }) => {
   );
 };
 
-const clsx = (...args: any[]) => args.filter(Boolean).join(' ');
+const clsx = (...args: (string | boolean | undefined | null)[]) => args.filter(Boolean).join(' ');

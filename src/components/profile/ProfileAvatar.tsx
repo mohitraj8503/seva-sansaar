@@ -4,15 +4,9 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Loader2, Trash2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { Profile } from '@/types';
 
-interface Profile {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  email: string;
-  created_at: string;
-  bio?: string;
-}
+// Profile interface moved to @/types
 
 export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (url: string) => void }) => {
   const [isUploading, setIsUploading] = useState(false);
@@ -133,4 +127,4 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
   );
 };
 
-const clsx = (...classes: any[]) => classes.filter(Boolean).join(' ');
+const clsx = (...classes: (string | boolean | undefined | null)[]) => classes.filter(Boolean).join(' ');

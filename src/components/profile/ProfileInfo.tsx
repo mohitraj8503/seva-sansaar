@@ -3,15 +3,9 @@
 import React, { useState } from 'react';
 import { Edit2, Check, X, Loader2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { Profile } from '@/types';
 
-interface Profile {
-  id: string;
-  name: string;
-  avatar_url?: string;
-  email: string;
-  created_at: string;
-  bio?: string;
-}
+// Profile interface moved to @/types
 
 export const ProfileInfo = ({ user, onUpdate }: { user: Profile, onUpdate: (data: Profile) => void }) => {
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -85,7 +79,7 @@ export const ProfileInfo = ({ user, onUpdate }: { user: Profile, onUpdate: (data
             </div>
           </div>
         ) : (
-          <div className="flex items-start justify-between gap-4 cursor-pointer p-1 touch-manipulation" onClick={() => handleEdit('bio', user.bio)}>
+          <div className="flex items-start justify-between gap-4 cursor-pointer p-1 touch-manipulation" onClick={() => handleEdit('bio', user.bio || "")}>
             <p className={user.bio ? "text-white/80 text-sm leading-relaxed" : "text-white/20 text-sm italic"}>
               {user.bio || "Add a bio..."}
             </p>

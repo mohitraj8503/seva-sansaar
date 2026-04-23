@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Moon, Sun, Check } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { Profile } from '@/types';
 
 const ACCENT_COLORS = [
   { name: 'Indigo', value: '#6366f1', key: 'indigo' },
@@ -13,7 +14,7 @@ const ACCENT_COLORS = [
   { name: 'Slate', value: '#64748b', key: 'slate' },
 ];
 
-export const AppearanceSettings = ({ user, onUpdate }: { user: any, onUpdate: (data: any) => void }) => {
+export const AppearanceSettings = ({ user, onUpdate }: { user: Profile, onUpdate: (data: Partial<Profile>) => void }) => {
   const [theme, setTheme] = useState(user.theme || 'dark');
   const [accent, setAccent] = useState(user.accent_color || 'indigo');
   const supabase = createClient();
@@ -31,7 +32,7 @@ export const AppearanceSettings = ({ user, onUpdate }: { user: any, onUpdate: (d
     onUpdate({ ...user, theme: newTheme });
   };
 
-  const changeAccent = async (color: any) => {
+  const changeAccent = async (color: { key: string; value: string }) => {
     setAccent(color.key);
     localStorage.setItem('connectia_accent_color', color.key);
     document.documentElement.style.setProperty('--accent', color.value);

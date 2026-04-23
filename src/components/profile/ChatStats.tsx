@@ -27,10 +27,10 @@ export const ChatStats = ({ user }: { user: { id: string } }) => {
       const { data: firstMsg } = await supabase.from('messages').select('created_at').order('created_at', { ascending: true }).limit(1).single();
 
       setStats({
-        sent,
-        received,
-        images,
-        voice,
+        sent: sent || 0,
+        received: received || 0,
+        images: images || 0,
+        voice: voice || 0,
         firstDate: firstMsg?.created_at,
         activeHour: '10 PM' // Placeholder for complex aggregation
       });
@@ -42,10 +42,10 @@ export const ChatStats = ({ user }: { user: { id: string } }) => {
   if (loading) return <div className="p-8 text-center text-white/20 font-bold uppercase text-[10px] tracking-widest animate-pulse">Analyzing stats...</div>;
 
   const metricCards = [
-    { label: 'Sent', value: stats.sent, icon: Send, color: 'text-indigo-400' },
-    { label: 'Received', value: stats.received, icon: Inbox, color: 'text-green-400' },
-    { label: 'Images', value: stats.images, icon: ImageIcon, color: 'text-amber-400' },
-    { label: 'Voice', value: stats.voice, icon: Mic, color: 'text-rose-400' },
+    { label: 'Sent', value: stats?.sent || 0, icon: Send, color: 'text-indigo-400' },
+    { label: 'Received', value: stats?.received || 0, icon: Inbox, color: 'text-green-400' },
+    { label: 'Images', value: stats?.images || 0, icon: ImageIcon, color: 'text-amber-400' },
+    { label: 'Voice', value: stats?.voice || 0, icon: Mic, color: 'text-rose-400' },
   ];
 
   return (
@@ -70,14 +70,14 @@ export const ChatStats = ({ user }: { user: { id: string } }) => {
           <Calendar size={16} className="text-white/20" />
           <div>
             <p className="text-[10px] font-bold text-white/30 uppercase">First Message</p>
-            <p className="text-xs font-bold text-white">{stats.firstDate ? new Date(stats.firstDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '---'}</p>
+            <p className="text-xs font-bold text-white">{stats?.firstDate ? new Date(stats!.firstDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '---'}</p>
           </div>
         </div>
         <div className="flex items-center gap-4 p-4 bg-black/20 rounded-2xl border border-white/5">
           <Clock size={16} className="text-white/20" />
           <div>
             <p className="text-[10px] font-bold text-white/30 uppercase">Peak Chat Hour</p>
-            <p className="text-xs font-bold text-white">{stats.activeHour}</p>
+            <p className="text-xs font-bold text-white">{stats?.activeHour || '---'}</p>
           </div>
         </div>
       </div>

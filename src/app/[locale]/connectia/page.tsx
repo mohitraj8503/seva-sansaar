@@ -8,9 +8,10 @@ import {
   Loader2, Paperclip, X, Trash2, Reply, Smile, AlertCircle, Download, 
   Lock, Unlock, Image as ImageIcon, ChevronUp, ChevronDown, Heart,
   Copy, Star, Forward, Check, Camera, FileText, Play, Pause, ExternalLink, Maximize2,
-  User
+  User, Bell, Phone, Settings, VolumeX, Search, Calendar, Volume2, ArrowDown
 } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
 import { clsx } from 'clsx';
 import { createClient } from '@/utils/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -18,6 +19,7 @@ import confetti from 'canvas-confetti';
 
 // --- NEW IMPORTS ---
 import { chatLock } from '@/lib/chatLock';
+import { Profile, Message } from '@/types';
 import { PINLock } from '@/components/PINLock';
 import { PINSetup } from '@/components/PINSetup';
 import { sessionManager } from '@/lib/sessionManager';
@@ -30,31 +32,7 @@ import { ChatStats } from '@/components/profile/ChatStats';
 import { DangerZone } from '@/components/profile/DangerZone';
 
 // --- TYPES & INTERFACES ---
-interface Profile {
-  id: string;
-  name: string;
-  avatar_url: string;
-  email: string;
-  last_seen?: string;
-}
-
-interface Message {
-  id: string;
-  text: string;
-  file_url: string | null;
-  type: 'text' | 'image' | 'audio' | 'file';
-  sender_id: string; 
-  receiver_id: string;
-  status: 'sent' | 'delivered' | 'seen' | 'sending' | 'failed';
-  seen: boolean;
-  reactions?: Record<string, string>;
-  created_at: string;
-  reply_to?: string;
-  is_deleted?: boolean;
-  isOptimistic?: boolean;
-  edited_at?: string;
-  deleted_by?: string[];
-}
+// Centralized types moved to @/types
 
 interface LinkPreviewData {
   title?: string;
@@ -250,6 +228,12 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
              </div>
           )}
 
+          {message.type === 'video' && (
+             <div className="relative rounded-xl overflow-hidden mb-2 max-w-[240px]">
+                <video src={message.file_url!} controls className="w-full h-auto rounded-lg" />
+             </div>
+          )}
+
           {reactions.length > 0 && <div className="absolute -bottom-2.5 right-1 flex items-center bg-white border border-gray-100 px-1.5 py-0.5 rounded-full shadow-sm scale-90">{Array.from(new Set(reactions.map(r => r[1]))).map((e, idx) => <span key={idx} className="text-[11px]">{e}</span>)}{reactions.length > 1 && <span className="text-[9px] font-bold text-gray-500 ml-0.5">{reactions.length}</span>}</div>}
           {isStarred && <Star size={10} className="absolute -top-1.5 -left-1.5 text-yellow-500 fill-yellow-500" />}
 
@@ -345,6 +329,8 @@ export default function LoveLinkApp() {
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
   const [starredIds, setStarredIds] = useState<string[]>([]);
+  const [showSpecialDates, setShowSpecialDates] = useState(false);
+  const [showStarred, setShowStarred] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
@@ -359,6 +345,19 @@ export default function LoveLinkApp() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchIndex(0);
+      return;
+    }
+    const matches = messages
+      .filter(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(m => m.id);
+    setSearchResults(matches);
+    setSearchIndex(0);
+  }, [searchQuery, messages]);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
   const startRecording = async () => {
@@ -396,13 +395,14 @@ export default function LoveLinkApp() {
         setRecordingSeconds(prev => prev + 1);
       }, 1000);
 
-    } catch (error: Error | any) {
-      if (error.name === 'NotAllowedError') {
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.name === 'NotAllowedError') {
         alert('Microphone permission denied. Please allow microphone access in your browser settings.');
-      } else if (error.name === 'NotFoundError') {
+      } else if (err.name === 'NotFoundError') {
         alert('No microphone found on this device.');
       } else {
-        alert('Could not start recording: ' + error.message);
+        alert('Could not start recording: ' + err.message);
       }
       setIsRecording(false);
     }
@@ -643,7 +643,7 @@ export default function LoveLinkApp() {
     }
   };
 
-  const sendMessage = async (text: string, type: 'text' | 'image' | 'audio' | 'file' = 'text', fileUrl?: string, retryId?: string) => {
+  const sendMessage = async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' = 'text', fileUrl?: string, retryId?: string) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
     if (!text.trim() && !fileUrl) return;
     vibrate(10);
@@ -663,6 +663,49 @@ export default function LoveLinkApp() {
       if (error) throw error;
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
     } catch (err) { setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: 'failed' } : m)); }
+  };
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || !currentUser) return;
+    const reactions = { ...(msg.reactions || {}) };
+    reactions[currentUser.id] = emoji;
+    await supabase.from('messages').update({ reactions }).eq('id', messageId);
+  };
+
+  const handleDeleteMe = async (messageId: string) => {
+    if (!currentUser) return;
+    const msg = messages.find(m => m.id === messageId);
+    const deleted_by = [...(msg?.deleted_by || [])];
+    if (!deleted_by.includes(currentUser.id)) {
+      deleted_by.push(currentUser.id);
+      await supabase.from('messages').update({ deleted_by }).eq('id', messageId);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    }
+  };
+
+  const handleDeleteEveryone = async (messageId: string) => {
+    await supabase.from('messages').update({ is_deleted: true, text: 'This message was deleted' }).eq('id', messageId);
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setToast("Copied to clipboard");
+  };
+
+  const handleStar = (messageId: string) => {
+    setStarredIds(prev => prev.includes(messageId) ? prev.filter(id => id !== messageId) : [...prev, messageId]);
+    setToast(starredIds.includes(messageId) ? "Unstarred" : "Starred");
+  };
+
+  const handleExportChat = () => {
+    const chatContent = messages.map(m => `[${m.created_at}] ${m.sender_id === currentUser?.id ? 'Me' : activePartner?.name}: ${m.text}`).join('\n');
+    const blob = new Blob([chatContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-export-${activePartner?.name}.txt`;
+    a.click();
   };
 
   const handleSeen = async (messageId: string) => {
@@ -692,7 +735,7 @@ export default function LoveLinkApp() {
         if (p.payload.isTyping) setTimeout(() => setOtherUserTyping(false), 3000); 
       } 
     }).on('presence', { event: 'sync' }, () => { 
-      setOnlineUsers(Object.values(channel.presenceState()).map((p: any) => p[0]?.key)); 
+      setOnlineUsers(Object.values(channel.presenceState()).map((p: unknown[]) => (p[0] as { key: string })?.key)); 
     }).subscribe(async (s) => { 
       if (s === 'SUBSCRIBED') await channel.track({ key: currentUser.id, online_at: new Date().toISOString() }); 
     });
@@ -786,7 +829,6 @@ export default function LoveLinkApp() {
     window.addEventListener('blur', handleBlur);
     window.addEventListener('beforeunload', lockApp);
     window.addEventListener('pagehide', lockApp);
-    // @ts-ignore
     document.addEventListener('freeze', lockApp);
 
     return () => {
@@ -794,7 +836,6 @@ export default function LoveLinkApp() {
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('beforeunload', lockApp);
       window.removeEventListener('pagehide', lockApp);
-      // @ts-ignore
       document.removeEventListener('freeze', lockApp);
     };
   }, []);
@@ -919,7 +960,7 @@ export default function LoveLinkApp() {
                       <button onClick={() => { setShowStarred(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Star size={16} /> Starred Messages</button>
                       <button onClick={() => { setIsMuted(!isMuted); localStorage.setItem('lovelink_muted', !isMuted ? '1' : ''); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50">{isMuted ? <Volume2 size={16} /> : <VolumeX size={16} />} {isMuted ? 'Unmute' : 'Mute'}</button>
                       <button onClick={() => { handleExportChat(); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Download size={16} /> Export Chat</button>
-                      <button onClick={() => { if(chatLock.isLocked()) chatLock.disable(); else setShowSetup(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Lock size={16} /> {chatLock.isLocked() ? 'Disable Lock' : 'Lock Chat'}</button>
+                      <button onClick={() => { if(currentUser && chatLock.isLocked(currentUser.id)) chatLock.disable(currentUser.id); else setShowSetup(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Lock size={16} /> {currentUser && chatLock.isLocked(currentUser.id) ? 'Disable Lock' : 'Lock Chat'}</button>
                       <button onClick={() => { setShowWallpaperSheet(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><ImageIcon size={16} /> Chat Wallpaper</button>
                       <button onClick={() => { setShowClearConfirm(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-rose-500 font-bold"><Trash2 size={16} /> Clear Chat</button>
                     </motion.div>
@@ -933,7 +974,7 @@ export default function LoveLinkApp() {
                       <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." className="bg-transparent text-sm text-white outline-none flex-1" />
                       {searchResults.length > 0 && <span className="text-[10px] font-bold text-white/30 uppercase">{searchIndex + 1} of {searchResults.length}</span>}
                     </div>
-                    <div className="flex gap-2"><button onClick={prevSearch} className="text-white/30 hover:text-white"><ChevronUp size={20} /></button><button onClick={nextSearch} className="text-white/30 hover:text-white"><ChevronDown size={20} /></button><button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-white/30 hover:text-white"><X size={20} /></button></div>
+                    <div className="flex gap-2"><button onClick={() => setSearchIndex(prev => (prev - 1 + searchResults.length) % searchResults.length)} className="text-white/30 hover:text-white"><ChevronUp size={20} /></button><button onClick={() => setSearchIndex(prev => (prev + 1) % searchResults.length)} className="text-white/30 hover:text-white"><ChevronDown size={20} /></button><button onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} className="text-white/30 hover:text-white"><X size={20} /></button></div>
                   </div>
                 )}
 
@@ -1181,9 +1222,9 @@ export default function LoveLinkApp() {
                     
                     <RelationshipStats />
 
-                    <AppearanceSettings user={currentUser} onUpdate={setCurrentUser} />
+                    <AppearanceSettings user={currentUser} onUpdate={(data) => setCurrentUser(prev => prev ? ({ ...prev, ...data }) : null)} />
 
-                    <PrivacySecurity user={currentUser} onUpdate={setCurrentUser} onTriggerLockSetup={() => setShowSetup(true)} />
+                    <PrivacySecurity user={currentUser} onUpdate={(data) => setCurrentUser(prev => prev ? ({ ...prev, ...data }) : null)} onTriggerLockSetup={() => setShowSetup(true)} />
 
                     <ChatStats user={currentUser} />
 
@@ -1213,7 +1254,7 @@ export default function LoveLinkApp() {
                          <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto" />
                          <div className="text-center space-y-2">
                            <h3 className="text-2xl font-black text-gray-900">End Session?</h3>
-                           <p className="text-gray-500 text-sm">You'll need to log in again to access the chat.</p>
+                           <p className="text-gray-500 text-sm">You&apos;ll need to log in again to access the chat.</p>
                          </div>
                          <div className="flex flex-col gap-3 mt-4">
                             <button 

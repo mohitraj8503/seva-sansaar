@@ -1,0 +1,71 @@
+
+> seva-sansaar@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.15
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.4s
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/app/[locale]/connectia/page.tsx
+9:9  Warning: 'Unlock' is defined but never used.  @typescript-eslint/no-unused-vars
+9:61  Warning: 'Heart' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+18:8  Warning: 'confetti' is defined but never used.  @typescript-eslint/no-unused-vars
+52:12  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+94:22  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+155:8  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+160:102  Warning: 'onRetry' is defined but never used.  @typescript-eslint/no-unused-vars
+208:16  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+447:25  Warning: 'uploadData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+569:10  Warning: 'showSetup' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+574:9  Warning: 'scrollContainerRef' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+665:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+855:6  Warning: React Hook useEffect has missing dependencies: 'activePartner' and 'currentUser'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+904:59  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+921:53  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+921:53  Warning: img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.  jsx-a11y/alt-text
+931:51  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+931:51  Warning: img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.  jsx-a11y/alt-text
+945:48  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+945:48  Warning: img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.  jsx-a11y/alt-text
+1106:236  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+1106:236  Warning: img elements must have an alt prop, either with meaningful text, or an empty string for decorative images.  jsx-a11y/alt-text
+
+./src/app/[locale]/login/page.tsx
+3:10  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+5:23  Warning: 'Lock' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/api/link-preview/route.ts
+6:14  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+9:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+9:56  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+36:12  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/Navbar.tsx
+9:10  Warning: 'clsx' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/PINLock.tsx
+73:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/profile/ChatStats.tsx
+4:21  Warning: 'TrendingUp' is defined but never used.  @typescript-eslint/no-unused-vars
+40:6  Warning: React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/profile/PrivacySecurity.tsx
+4:30  Warning: 'LogOut' is defined but never used.  @typescript-eslint/no-unused-vars
+4:51  Warning: 'Check' is defined but never used.  @typescript-eslint/no-unused-vars
+9:41  Warning: 'onUpdate' is defined but never used.  @typescript-eslint/no-unused-vars
+12:10  Warning: 'showOnline' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+20:6  Warning: React Hook useEffect has missing dependencies: 'fetchSessions' and 'user.id'. Either include them or remove the dependency array. If 'setIsLockEnabled' needs the current value of 'user.id', you can also switch to useReducer instead of useState and read 'user.id' in the reducer.  react-hooks/exhaustive-deps
+
+./src/components/profile/ProfileAvatar.tsx
+69:9  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

@@ -180,4 +180,4 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
   );
 };
 
-const clsx = (...args: any[]) => args.filter(Boolean).join(' ');
+const clsx = (...classes: (string | boolean | undefined | null)[]) => classes.filter(Boolean).join(' ');

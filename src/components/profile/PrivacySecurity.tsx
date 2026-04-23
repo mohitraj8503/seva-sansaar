@@ -4,17 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Eye, Monitor, LogOut, ShieldCheck, Check, Loader2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { chatLock } from '@/lib/chatLock';
+import { Profile } from '@/types';
 
-export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: any, onUpdate: (data: any) => void, onTriggerLockSetup: () => void }) => {
+export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: Profile, onUpdate: (data: Partial<Profile>) => void, onTriggerLockSetup: () => void }) => {
   const [isLockEnabled, setIsLockEnabled] = useState(false);
   const [showLastSeen, setShowLastSeen] = useState(user.show_last_seen !== false);
   const [showOnline, setShowOnline] = useState(user.show_online_status !== false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<{ id: string; device: string; last_active: string; current: boolean }[]>([]);
   const [isFetchingSessions, setIsFetchingSessions] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
-    setIsLockEnabled(chatLock.isLocked());
+    if (user?.id) setIsLockEnabled(chatLock.isLocked(user.id));
     fetchSessions();
   }, []);
 
@@ -40,7 +41,7 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
       const pin = window.prompt("Enter current PIN to disable:");
       if (pin) {
         // Normally you'd hash and compare here
-        chatLock.disable();
+        chatLock.disable(user.id);
         setIsLockEnabled(false);
       }
     } else {
@@ -111,4 +112,4 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
 };
 
 import { motion } from 'framer-motion';
-const clsx = (...classes: any[]) => classes.filter(Boolean).join(' ');
+const clsx = (...classes: (string | boolean | undefined | null)[]) => classes.filter(Boolean).join(' ');
