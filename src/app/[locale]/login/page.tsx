@@ -7,7 +7,7 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
 import { sessionManager } from "@/lib/sessionManager";
 import { chatLock } from "@/lib/chatLock";
-import { AnimatedLogo } from "@/components/AnimatedLogo";
+import Image from "next/image";
 
 // --- THE VAULT (Hardcoded for Undercover Mode) ---
 const ALLOWED = [
@@ -103,7 +103,9 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-sm">
         <div className="rounded-[2.5rem] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-3xl transition-all duration-700 hover:border-white/20">
           <div className="mb-10 text-center flex flex-col items-center">
-            <AnimatedLogo size="md" className="mb-6" priority />
+            <div className="relative w-48 h-16 mb-6">
+              <Image src="/logo-horizontal.png" alt="Seva Sansaar" fill className="object-contain" priority />
+            </div>
             <h1 className="text-4xl font-black text-white tracking-tight">सेवा संसार</h1>
             <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">Seva Sansaar Portal</p>
           </div>

@@ -32,7 +32,6 @@ import { PrivacySecurity } from '@/components/profile/PrivacySecurity';
 import { RelationshipStats } from '@/components/profile/RelationshipStats';
 import { ChatStats } from '@/components/profile/ChatStats';
 import { DangerZone } from '@/components/profile/DangerZone';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 // --- TYPES & INTERFACES ---
 // Centralized types moved to @/types
@@ -1015,7 +1014,7 @@ export default function SevaSansaarApp() {
           <AnimatePresence mode="wait">
             {view === 'welcome' && (
               <motion.div key="w" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center bg-black p-10">
-                 <AnimatedLogo size="lg" className="mb-auto mt-20" />
+                 <div className="mb-auto mt-20 w-80 h-80 relative"><Image src="/welcome-bg.png" alt="Welcome" fill className="object-contain" /></div>
                  <div className="mb-10 text-center">
                     <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">SEVA SANSAAR APP</p>
                     <h1 className="text-[34px] font-bold text-white leading-tight mb-4">Conversations that matter.</h1>
