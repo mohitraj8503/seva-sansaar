@@ -187,7 +187,13 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
            <div className="flex-1 h-px bg-indigo-500/20" />
         </div>
       )}
-      <motion.div initial={message.isOptimistic ? { scale: 0.8, opacity: 0 } : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, scale: 1 }} className={clsx("flex flex-col max-w-[85%] relative", isMe ? "ml-auto items-end" : "items-start", hideAvatar ? "mb-1" : "mb-4")} data-msg-id={message.id} ref={bubbleRef}>
+      <motion.div 
+        initial={message.isOptimistic ? { scale: 0.8, opacity: 0 } : { opacity: 0, y: 10 }} 
+        animate={{ opacity: 1, y: 0, scale: 1 }} 
+        className={clsx("flex flex-col max-w-[85%] relative", isMe ? "ml-auto items-end" : "items-start", hideAvatar ? "mb-1" : "mb-4")} 
+        data-msg-id={message.id} 
+        ref={bubbleRef}
+      >
         <AnimatePresence>{showLightbox && <Lightbox src={message.file_url!} onClose={() => setShowLightbox(false)} />}</AnimatePresence>
         
         {replyToMsg && (
@@ -198,25 +204,43 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
         )}
 
         <div 
-          {...longPress} onClick={() => { if(showMenu) setShowMenu(false); }}
+          {...longPress} 
+          onClick={() => { if(showMenu) setShowMenu(false); }}
           className={clsx(
-            "p-3.5 rounded-2xl text-[14px] font-medium leading-relaxed shadow-sm transition-all relative cursor-pointer group", 
-            isMe ? "bg-indigo-600 text-white rounded-tr-none" : "bg-[#FFF9E0] text-black rounded-tl-none border border-black/5",
-            isHighlighted && "ring-4 ring-yellow-400 ring-opacity-50 scale-105"
+            "rounded-2xl font-medium leading-relaxed shadow-sm transition-all relative cursor-pointer group overflow-hidden", 
+            isMe ? "bg-indigo-600 text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-black/5",
+            isHighlighted && "ring-4 ring-yellow-400 ring-opacity-50 scale-105",
+            message.type === 'image' || message.type === 'video' ? "p-0.5" : "p-3.5"
           )}
         >
           {message.type === 'image' && (
-            <div className="relative rounded-xl overflow-hidden mb-2 max-w-[240px] group/img" onClick={() => setShowLightbox(true)}>
-               <div className="relative w-full aspect-[4/3]"><Image src={message.file_url!} alt="Sent" fill className="object-cover" /></div>
-               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center"><Maximize2 className="text-white" /></div>
+            <div className="relative rounded-[14px] overflow-hidden max-w-[280px] min-w-[150px] group/img shadow-inner" onClick={() => setShowLightbox(true)}>
+               <div className="relative w-full aspect-square md:aspect-[4/3] min-h-[200px]">
+                 <Image 
+                   src={message.file_url!} 
+                   alt="Sent" 
+                   fill 
+                   className="object-cover transition-transform duration-500 group-hover/img:scale-110" 
+                 />
+               </div>
+               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-100 transition-opacity" />
+               <div className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-md">
+                 <span className="text-[9px] font-black text-white/90">{formatMsgTime(message.created_at)}</span>
+                 {isMe && <MessageStatusTicks status={message.status} isOverlay />}
+               </div>
+               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                 <Maximize2 className="text-white" />
+               </div>
             </div>
           )}
           
           {message.type === 'audio' ? <AudioPlayer src={message.file_url!} duration={message.text} /> : (
-            <div className="space-y-1">
-              <p className="whitespace-pre-wrap">{message.text}</p>
-              {url && <LinkPreview url={url} />}
-            </div>
+            message.type === 'text' && (
+              <div className="space-y-1">
+                <p className="whitespace-pre-wrap">{message.text}</p>
+                {url && <LinkPreview url={url} />}
+              </div>
+            )
           )}
 
           {message.type === 'file' && (
@@ -224,20 +248,24 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
                 <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center"><FileText className="text-white" /></div>
                 <div className="flex-1 min-w-0">
                    <p className="text-xs font-bold truncate text-white">{message.text}</p>
-                   <p className="text-[9px] text-white/40 uppercase font-bold">Document • 2.4 MB</p>
+                   <p className="text-[9px] text-white/40 uppercase font-bold">Document</p>
                 </div>
                 <a href={message.file_url!} download className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white"><Download size={16} /></a>
              </div>
           )}
 
           {message.type === 'video' && (
-             <div className="relative rounded-xl overflow-hidden mb-2 max-w-[240px]">
-                <video src={message.file_url!} controls className="w-full h-auto rounded-lg" />
+             <div className="relative rounded-[14px] overflow-hidden max-w-[280px] bg-black">
+                <video src={message.file_url!} controls className="w-full h-auto rounded-lg max-h-[400px]" />
+                <div className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur-md">
+                 <span className="text-[9px] font-black text-white/90">{formatMsgTime(message.created_at)}</span>
+                 {isMe && <MessageStatusTicks status={message.status} isOverlay />}
+               </div>
              </div>
           )}
 
           {message.type === 'call' && (
-            <div className="flex items-center gap-3 py-1">
+            <div className="flex items-center gap-3 py-1 p-3.5">
               <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center", message.text.includes('Missed') || message.text.includes('declined') ? "bg-rose-500/20 text-rose-500" : "bg-green-500/20 text-green-500")}>
                 <Phone size={14} fill="currentColor" />
               </div>
@@ -272,7 +300,7 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
           </AnimatePresence>
         </div>
 
-        {!hideTimestamp && (
+        {!hideTimestamp && (message.type === 'text' || message.type === 'audio' || message.type === 'file' || message.type === 'call') && (
           <div className="flex items-center gap-1.5 mt-1.5 px-1 opacity-60">
             <span className="text-[10px] font-bold text-gray-400">{formatMsgTime(message.created_at)}</span>
             {message.edited_at && <span className="text-[9px] text-gray-400 italic">edited</span>}
@@ -285,12 +313,12 @@ const MessageBubble = memo(({ message, isMe, onReact, onReply, onDeleteMe, onDel
 });
 MessageBubble.displayName = 'MessageBubble';
 
-const MessageStatusTicks = ({ status }: { status: 'sent' | 'delivered' | 'seen' | 'sending' | 'failed' }) => {
-  if (status === 'sending') return <Loader2 size={12} className="text-gray-300 animate-spin" />;
+const MessageStatusTicks = ({ status, isOverlay }: { status: 'sent' | 'delivered' | 'seen' | 'sending' | 'failed', isOverlay?: boolean }) => {
+  if (status === 'sending') return <Loader2 size={12} className={clsx("animate-spin", isOverlay ? "text-white/40" : "text-gray-300")} />;
   if (status === 'failed') return <AlertCircle size={12} className="text-rose-500" />;
-  if (status === 'sent') return <CheckCheck size={14} className="text-gray-300" />;
-  if (status === 'delivered') return <CheckCheck size={14} className="text-gray-500" />;
-  if (status === 'seen') return <CheckCheck size={14} className="text-blue-400" />;
+  if (status === 'sent') return <CheckCheck size={14} className={clsx(isOverlay ? "text-white/40" : "text-gray-300")} />;
+  if (status === 'delivered') return <CheckCheck size={14} className={clsx(isOverlay ? "text-white/60" : "text-gray-500")} />;
+  if (status === 'seen') return <CheckCheck size={14} className={clsx(isOverlay ? "text-indigo-300" : "text-blue-400")} />;
   return null;
 };
 
