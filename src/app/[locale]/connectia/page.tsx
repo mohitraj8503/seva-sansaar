@@ -839,11 +839,19 @@ export default function SevaSansaarApp() {
     return { publicUrl: data.publicUrl };
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, _menuType: 'image' | 'video' | 'file') => {
     const files = Array.from(e.target.files || []).slice(0, 5);
     for (const file of files) {
-      const { publicUrl } = await uploadFile(file, type);
-      if (publicUrl) sendMessage(file.name, type === 'file' ? 'file' : type, publicUrl);
+      // Automatic detection based on MIME or Extension
+      let actualType: 'image' | 'video' | 'file' = 'file';
+      if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name)) {
+        actualType = 'image';
+      } else if (file.type.startsWith('video/') || /\.(mp4|mov|avi|wmv)$/i.test(file.name)) {
+        actualType = 'video';
+      }
+
+      const { publicUrl } = await uploadFile(file, actualType);
+      if (publicUrl) sendMessage(file.name, actualType, publicUrl);
     }
     setShowAttachmentMenu(false);
   };
