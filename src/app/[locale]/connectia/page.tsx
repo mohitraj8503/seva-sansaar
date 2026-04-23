@@ -341,6 +341,7 @@ export default function SevaSansaarApp() {
   const [isMuted, setIsMuted] = useState(false);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [activeMediaTab, setActiveMediaTab] = useState<'Images' | 'Videos' | 'Docs'>('Images');
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [specialDates, setSpecialDates] = useState<SpecialDate[]>([]);
   const [starredIds, setStarredIds] = useState<string[]>([]);
   const [showSpecialDates, setShowSpecialDates] = useState(false);
@@ -633,7 +634,7 @@ export default function SevaSansaarApp() {
     // Pagination detection
     if (el.scrollTop === 0 && hasMore && !isFetchingOlder) fetchOlderMessages();
   };
-
+  
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingSentRef = useRef<number>(0);
 
@@ -651,6 +652,13 @@ export default function SevaSansaarApp() {
       });
     }
   };
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior });
+      setUnreadCount(0);
+    }
+  }, []);
   const scrollToBottomRef = useRef(scrollToBottom);
   useEffect(() => { scrollToBottomRef.current = scrollToBottom; }, [scrollToBottom]);
 
@@ -686,13 +694,6 @@ export default function SevaSansaarApp() {
     }
     setIsFetchingOlder(false);
   };
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior });
-      setUnreadCount(0);
-    }
-  }, []);
 
   const sendMessage = useCallback(async (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call' = 'text', fileUrl?: string, retryId?: string) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
@@ -1148,8 +1149,19 @@ export default function SevaSansaarApp() {
             )}
 
             {view === 'chat' && (
-              <motion.div key="c" initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col h-full bg-black relative overflow-hidden">
-                <header className="p-6 pt-10 safe-top flex items-center justify-between shrink-0 bg-black z-20">
+              <motion.div 
+                key="c" 
+                initial={{ x: 50, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }} 
+                className="flex-1 flex flex-col h-full relative overflow-hidden"
+                style={{ 
+                  backgroundImage: wallpaperUrl ? `url(${wallpaperUrl})` : (wallpaper || 'none'),
+                  backgroundColor: !wallpaperUrl && !wallpaper ? '#ffffff' : 'transparent',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                <header className="p-6 pt-12 safe-top flex items-center justify-between shrink-0 bg-white/10 backdrop-blur-md z-20">
                   <div className="flex items-center gap-4">
                      <div onClick={() => setView('list')} className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white"><ChevronLeft size={24} /></div>
                      <div className="flex flex-col items-center gap-1">
@@ -1227,17 +1239,7 @@ export default function SevaSansaarApp() {
                   </div>
                 )}
 
-                <div 
-                   className="flex-1 rounded-t-[2.5rem] flex flex-col overflow-hidden relative shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
-                   style={{ 
-                     backgroundImage: wallpaperUrl ? `url(${wallpaperUrl})` : (wallpaper || 'none'),
-                     backgroundColor: !wallpaperUrl && !wallpaper ? '#ffffff' : 'transparent',
-                     backgroundSize: 'cover',
-                     backgroundPosition: 'center',
-                     display: 'flex',
-                     flexDirection: 'column'
-                   }}
-                 >
+                <div className="flex-1 flex flex-col overflow-hidden relative">
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide pb-4" onScroll={handleScroll}>
                      {isFetchingOlder && <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 text-indigo-500 animate-spin" /></div>}
                      {messages.length === 0 && !isFetchingOlder && (
@@ -1322,13 +1324,13 @@ export default function SevaSansaarApp() {
                           <>
                             <button onClick={() => setShowEmojiPanel(!showEmojiPanel)} className="text-gray-400 hover:text-indigo-600 transition-colors"><Smile size={22} /></button>
                             <button onClick={() => setShowAttachmentMenu(!showAttachmentMenu)} className="text-gray-400 hover:text-indigo-600 transition-colors"><Paperclip size={22} /></button>
-                            <input value={inputText} onChange={(e) => { setInputText(e.target.value); handleTyping(e.target.value.length > 0); }} onKeyDown={(e) => e.key === 'Enter' && (sendMessage(inputText), handleTyping(false))} placeholder="Message..." className="flex-1 bg-transparent text-sm text-black outline-none font-medium placeholder:text-gray-300 px-2" />
+                            <input value={inputText} onChange={(e) => { setInputText(e.target.value); handleTyping(e.target.value.length > 0 ? 'typing' : null); }} onKeyDown={(e) => e.key === 'Enter' && (sendMessage(inputText), handleTyping(null))} placeholder="Message..." className="flex-1 bg-transparent text-sm text-black outline-none font-medium placeholder:text-gray-300 px-2" />
                           </>
                         )}
                         <div className="relative h-10 flex items-center">
                           <AnimatePresence mode="wait">
                             {inputText.trim() ? (
-                              <motion.button key="send" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} onClick={() => { sendMessage(inputText); handleTyping(false); }} className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-600 text-white shadow-lg"><Send size={18} /></motion.button>
+                              <motion.button key="send" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} onClick={() => { sendMessage(inputText); handleTyping(null); }} className="w-10 h-10 rounded-full flex items-center justify-center bg-indigo-600 text-white shadow-lg"><Send size={18} /></motion.button>
                             ) : !isRecording && (
                               <motion.button
                                 key="mic"
@@ -1382,7 +1384,7 @@ export default function SevaSansaarApp() {
                           if (activeMediaTab === 'Docs') return m.type === 'file';
                           return false;
                         }).filter(m => m.file_url).map(m => (
-                          <div key={m.id} className="aspect-square bg-white/5 rounded-lg overflow-hidden relative group" onClick={() => { if(m.type === 'image') setShowLightbox(true); }}>
+                          <div key={m.id} className="aspect-square bg-white/5 rounded-lg overflow-hidden relative group" onClick={() => { if(m.type === 'image' && m.file_url) setLightboxImage(m.file_url); }}>
                             {m.type === 'image' ? (
                               <Image src={m.file_url!} alt="Media" fill className="object-cover" />
                             ) : m.type === 'video' ? (
@@ -1395,6 +1397,7 @@ export default function SevaSansaarApp() {
                       </div>
                     </motion.div>
                   )}
+                  {lightboxImage && <Lightbox src={lightboxImage} onClose={() => setLightboxImage(null)} />}
                   {showSpecialDates && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center p-6">
                       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden flex flex-col">
