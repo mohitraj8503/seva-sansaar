@@ -55,10 +55,11 @@ export const ImageBubble = ({ message, onLightbox }: ImageBubbleProps) => {
                 punch={1}
               />
             ) : message.thumbnail_url ? (
-              <img 
+              <Image 
                 src={message.thumbnail_url} 
                 alt="" 
-                className="w-full h-full object-cover blur-xl scale-110"
+                fill
+                className="object-cover blur-xl scale-110"
               />
             ) : null}
           </div>

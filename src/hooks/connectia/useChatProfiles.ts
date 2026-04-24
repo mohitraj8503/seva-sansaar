@@ -70,7 +70,29 @@ export const useChatProfiles = () => {
       }
     };
     initSession();
-  }, [setCurrentUser, fetchInitialData]);
+
+    // REALTIME PROFILE UPDATES
+    const channel = supabase.channel('profile_updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload) => {
+        const updatedProfile = payload.new as Profile;
+        
+        // Update chatProfiles list
+        setChatProfiles(prev => prev.map(p => p.id === updatedProfile.id ? { ...p, ...updatedProfile } : p));
+        
+        // Update currentUser if it's me
+        if (useChatStore.getState().currentUser?.id === updatedProfile.id) {
+          setCurrentUser(prev => prev ? ({ ...prev, ...updatedProfile }) : updatedProfile);
+        }
+        
+        // Update activePartner if it's them
+        if (useChatStore.getState().activePartner?.id === updatedProfile.id) {
+          setActivePartner(updatedProfile);
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [setCurrentUser, fetchInitialData, setActivePartner]);
 
   const selectPartner = useCallback(async (partner: Profile) => {
     if (!currentUser) return;

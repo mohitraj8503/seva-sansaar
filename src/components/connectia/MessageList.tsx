@@ -5,6 +5,7 @@ import { Message, Profile } from '@/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { useChatStore } from '@/store/useChatStore';
+import { messageEngine } from '@/services/connectia/messageEngine';
 
 interface MessageListProps {
   flatMessages: Array<{ type: 'date'; date: string } | { type: 'message'; msg: Message } | { type: 'typing'; state: 'typing' | 'recording' }>;
@@ -46,17 +47,18 @@ export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(
 
   useEffect(() => {
     const isNewMessage = flatMessages.length > prevMessagesLength.current;
-    
     if (isNewMessage) {
-      if (atBottom) {
-        scrollToBottom();
+      const lastMsg = flatMessages[flatMessages.length - 1];
+      const isMyMsg = lastMsg.type === 'message' && lastMsg.msg.sender_id === currentUser?.id;
+      
+      if (atBottom || isMyMsg) {
+        requestAnimationFrame(scrollToBottom);
       } else {
         setShowNewMessageButton(true);
       }
     }
-    
     prevMessagesLength.current = flatMessages.length;
-  }, [flatMessages.length, atBottom, scrollToBottom]);
+  }, [flatMessages, atBottom, scrollToBottom, currentUser?.id]);
 
   const renderItem = (index: number) => {
     const item = flatMessages[index];
@@ -103,7 +105,7 @@ export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(
         onCopy={(t) => { navigator.clipboard.writeText(t); }}
         onStar={toggleStar}
         onLightbox={setLightboxImage}
-        onSeen={(id) => onSeen ? onSeen(id) : updateMessage(id, { status: 'seen', seen: true })}
+        onSeen={(id) => onSeen ? onSeen(id) : messageEngine.markAsSeen(id, null)}
         replyToMessage={m.reply_to ? messageMap[m.reply_to] : undefined}
         isStarred={starredIds.includes(m.id)}
         isSearchResult={searchResults.includes(m.id)}

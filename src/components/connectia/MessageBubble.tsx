@@ -65,12 +65,17 @@ export const MessageBubble = memo(({
         <div className="relative">
           <motion.div 
             layoutId={message.id}
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ 
+              type: 'spring', 
+              damping: 30, 
+              stiffness: 500,
+              opacity: { duration: 0.1 }
+            }}
             className={clsx(
-              "relative rounded-[2rem] shadow-sm transition-all overflow-hidden",
+              "relative rounded-[2rem] shadow-sm transition-all overflow-hidden message-animate",
               isMe ? "bg-indigo-600 text-white rounded-tr-lg" : "bg-white text-black border border-gray-100 rounded-tl-lg",
               message.type === 'image' ? "p-1" : "px-5 py-3",
               message.status === 'failed' && "border-rose-500 opacity-80"

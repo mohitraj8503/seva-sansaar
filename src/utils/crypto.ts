@@ -16,11 +16,21 @@ export const getPrivateKey = () => {
   return stored;
 };
 
+const sharedSecretCache = new Map<string, Uint8Array>();
+
 export const initSodium = async () => {
   if (sodium) return sodium;
   await _sodium.ready;
   sodium = _sodium;
   return sodium;
+};
+
+export const getSharedSecret = async (myPrivBase64: string, theirPubBase64: string, partnerId: string) => {
+  if (sharedSecretCache.has(partnerId)) return sharedSecretCache.get(partnerId)!;
+  
+  const secret = await ConnectiaCrypto.deriveSharedSecret(myPrivBase64, theirPubBase64);
+  sharedSecretCache.set(partnerId, secret);
+  return secret;
 };
 
 /**
@@ -44,10 +54,22 @@ export const ConnectiaCrypto = {
    */
   deriveSharedSecret: async (myPrivateKeyBase64: string, theirPublicKeyBase64: string) => {
     const s = await initSodium();
-    const myPriv = s.from_base64(myPrivateKeyBase64);
-    const theirPub = s.from_base64(theirPublicKeyBase64);
-    
-    return s.crypto_box_beforenm(theirPub, myPriv);
+    try {
+      const myPriv = s.from_base64(myPrivateKeyBase64);
+      const theirPub = s.from_base64(theirPublicKeyBase64);
+      
+      if (theirPub.length !== s.crypto_box_PUBLICKEYBYTES) {
+        throw new Error(`Invalid public key length: expected ${s.crypto_box_PUBLICKEYBYTES}, got ${theirPub.length}`);
+      }
+      if (myPriv.length !== s.crypto_box_SECRETKEYBYTES) {
+        throw new Error(`Invalid private key length: expected ${s.crypto_box_SECRETKEYBYTES}, got ${myPriv.length}`);
+      }
+      
+      return s.crypto_box_beforenm(theirPub, myPriv);
+    } catch (e) {
+      console.error('Connectia: Shared secret derivation failed', e);
+      throw e;
+    }
   },
 
   /**

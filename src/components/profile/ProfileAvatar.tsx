@@ -43,11 +43,20 @@ export const ProfileAvatar = ({ user, onUpdate }: { user: Profile, onUpdate: (ur
       if (updateError) throw updateError;
       
       setUploadProgress(100);
-      onUpdate(publicUrl);
-      setTimeout(() => setIsUploading(false), 500);
-    } catch (err) {
-      console.error(err);
+      
+      // Give Supabase a moment to settle
+      setTimeout(() => {
+        onUpdate(publicUrl);
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 800);
+
+    } catch (err: unknown) {
+      console.error("AVATAR UPDATE FAILED:", err);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      alert("Failed to update profile picture: " + message);
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 

@@ -6,8 +6,8 @@ export class ConnectiaDatabase extends Dexie {
 
   constructor() {
     super('ConnectiaDB');
-    this.version(1).stores({
-      messages: 'id, sender_id, receiver_id, created_at, [sender_id+receiver_id]'
+    this.version(2).stores({
+      messages: 'id, sender_id, receiver_id, created_at, status, [sender_id+receiver_id]'
     });
   }
 

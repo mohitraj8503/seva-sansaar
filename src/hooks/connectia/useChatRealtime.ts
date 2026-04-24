@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Message, Call, Profile } from '@/types';
+import { Message, Call } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useChatStore } from '@/store/useChatStore';
 import { CryptoWorkerManager } from '@/utils/connectia/workerManager';
+import { messageEngine } from '@/services/connectia/messageEngine';
 
 const supabase = createClient();
 
@@ -85,8 +86,8 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
       });
 
     // Handle Heartbeat Pings
-    channel.on('broadcast', { event: 'ping' }, (p) => {
-      setOnlineUsers(prev => prev.includes(p.payload.userId) ? prev : [...prev, p.payload.userId]);
+    channel.on('broadcast', { event: 'ping' }, (p: { payload: { userId: string } }) => {
+      setOnlineUsers((prev: string[]) => prev.includes(p.payload.userId) ? prev : [...prev, p.payload.userId]);
     });
 
     // Rule 2: Message Seen Broadcast (No DB round-trip for critical path)
@@ -94,24 +95,26 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
       setMessages(prev => prev.map(m => m.id === p.payload.messageId ? { ...m, status: 'seen' } : m));
     });
 
-    const callChannel = supabase.channel('call-signals')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'calls', 
-        filter: `receiver_id=eq.${currentUser.id}` 
-      }, (payload) => {
-        const nc = payload.new as Call;
-        if (nc.status === 'ringing') {
-          // Note: In a real app, you'd fetch the caller profile if not in store
-          setActiveCall({ type: 'incoming', target: { id: nc.caller_id, name: 'Caller', avatar_url: null } as Profile, call: nc });
+    // --- RULE: DATABASE-LESS CALL SIGNALING ---
+    const userSignals = supabase.channel(`user_signals_${currentUser.id}`);
+    
+    userSignals
+      .on('broadcast', { event: 'call_request' }, async ({ payload }) => {
+        // Trigger incoming call UI
+        // In a private app, the 'caller' is the only other user
+        if (activePartner && payload.callerId === activePartner.id) {
+          setActiveCall({ 
+            type: 'incoming', 
+            target: activePartner, 
+            call: { id: payload.callId, caller_id: payload.callerId, receiver_id: currentUser.id, status: 'ringing' } as Call 
+          });
         }
       })
       .subscribe();
 
     return () => { 
       supabase.removeChannel(channel); 
-      supabase.removeChannel(callChannel);
+      supabase.removeChannel(userSignals);
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       channelRef.current = null; 
     };
@@ -129,13 +132,10 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
 
   const broadcastSeen = (messageId: string) => {
     if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'message_seen',
-        payload: { messageId }
-      });
+      messageEngine.markAsSeen(messageId, channelRef.current);
     }
   };
 
   return { handleTyping, broadcastSeen };
 };
+

@@ -72,7 +72,7 @@ interface ChatStore {
   handleDeleteMe: (id: string) => Promise<void>;
   handleDeleteEveryone: (id: string) => Promise<void>;
   
-  setOnlineUsers: (users: string[]) => void;
+  setOnlineUsers: (users: string[] | ((prev: string[]) => string[])) => void;
   setOtherUserTyping: (state: 'typing' | 'recording' | null) => void;
   setActiveCall: (call: ChatStore['activeCall']) => void;
   
@@ -217,7 +217,9 @@ export const useChatStore = create<ChatStore>((set) => ({
     }));
   },
   
-  setOnlineUsers: (onlineUsers) => set({ onlineUsers }),
+  setOnlineUsers: (users: string[] | ((prev: string[]) => string[])) => set((state) => ({
+    onlineUsers: typeof users === 'function' ? users(state.onlineUsers) : users
+  })),
   setOtherUserTyping: (otherUserTyping) => set({ otherUserTyping }),
   setActiveCall: (activeCall) => set({ activeCall }),
   

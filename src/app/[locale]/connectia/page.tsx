@@ -206,16 +206,18 @@ export default function ConnectiaPage() {
 
   // --- HISTORY MANAGEMENT (Swipe Back Fix) ---
   React.useEffect(() => {
-    // Push an initial state to the history stack
-    window.history.pushState({ view: store.view }, "");
-
     const handlePopState = (e: PopStateEvent) => {
-      // If we are not in the 'list' view, go back to 'list' instead of exiting
-      if (store.view !== 'list') {
+      // If we are in the 'chat' view, go back to 'list' instead of exiting
+      if (store.view === 'chat') {
         e.preventDefault();
         store.setView('list');
-        // Re-push state to keep the user in the app for the next back gesture
+        // Push state again to keep the user in the "loop"
         window.history.pushState({ view: 'list' }, "");
+      } else if (store.view !== 'list') {
+        store.setView('list');
+        window.history.pushState({ view: 'list' }, "");
+      } else {
+         // If already in list, let the default behavior happen (or show exit modal)
       }
     };
 
@@ -282,7 +284,7 @@ export default function ConnectiaPage() {
   return (
     <ChatErrorBoundary>
       <div className={clsx(
-        "h-[100dvh] w-full flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-900",
+        "h-[100dvh] w-full flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-900 overscroll-contain",
         store.darkMode ? "bg-black text-white" : "bg-[#f8f9fa] text-black"
       )}>
         <AnimatePresence>
@@ -292,7 +294,6 @@ export default function ConnectiaPage() {
               targetUser={store.activeCall.target} 
               type={store.activeCall.type} 
               onClose={() => store.setActiveCall(null)} 
-              incomingCall={store.activeCall.call} 
             />
           )}
         </AnimatePresence>
@@ -411,13 +412,7 @@ export default function ConnectiaPage() {
                       messageMap={messageMap}
                       searchResults={store.searchResults}
                       starredIds={store.starredIds}
-                      onSeen={(id) => {
-                        broadcastSeen(id);
-                        // Update DB and UI in background
-                        store.updateMessage(id, { status: 'seen', seen: true });
-                        supabase.from('messages').update({ status: 'seen', seen: true }).eq('id', id).then();
-                      }}
-                      onRetry={(m) => sendMessage(m.text, m.type, m.file_url || undefined, m.id)}
+                      onRetry={(m) => sendMessage(m.text, m.type, m.file_url || undefined, { id: m.id })}
                   />
                 </div>
 
@@ -429,7 +424,6 @@ export default function ConnectiaPage() {
                   startRecording={startRecording}
                   stopRecording={stopRecording}
                   isRecording={isRecording}
-                  recordingSeconds={recordingSeconds}
                   showAttachmentMenu={store.showAttachmentMenu}
                   setShowAttachmentMenu={store.setShowAttachmentMenu}
                   showEmojiPanel={store.showEmojiPanel}
@@ -438,8 +432,6 @@ export default function ConnectiaPage() {
                   setShowGifPicker={store.setShowGifPicker}
                   replyTo={store.replyTo}
                   setReplyTo={store.setReplyTo}
-                  editingMessage={store.editingMessage}
-                  setEditingMessage={store.setEditingMessage}
                   isUploadingAudio={isUploadingAudio}
                   onFileSelect={handleFileSelect}
                   attachmentRef={{ current: null }}

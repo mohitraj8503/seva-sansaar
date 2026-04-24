@@ -21,11 +21,14 @@ interface RecentChatsProps {
 }
 
 const ChatSkeleton = () => (
-  <div className="flex items-center gap-4 p-4 animate-pulse">
-    <div className="w-14 h-14 bg-gray-100 rounded-full shrink-0" />
-    <div className="flex-1 space-y-2">
-      <div className="h-4 bg-gray-100 rounded w-1/3" />
-      <div className="h-3 bg-gray-100 rounded w-2/3" />
+  <div className="flex items-center gap-5 py-4 border-b border-gray-50 rounded-3xl animate-pulse">
+    <div className="w-16 h-16 bg-gray-100 rounded-full shrink-0 shadow-sm" />
+    <div className="flex-1 space-y-3 min-w-0">
+      <div className="flex justify-between">
+        <div className="h-4 bg-gray-100 rounded-lg w-1/3" />
+        <div className="h-3 bg-gray-100 rounded-lg w-1/6" />
+      </div>
+      <div className="h-3 bg-gray-100 rounded-lg w-2/3" />
     </div>
   </div>
 );

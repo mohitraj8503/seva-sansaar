@@ -7,12 +7,11 @@ import { Message, Profile } from '@/types';
 interface ChatFooterProps {
   inputText: string;
   setInputText: (text: string) => void;
-  sendMessage: (text: string, type?: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call') => void;
+  sendMessage: (text: string, type?: Message['type'], fileUrl?: string, metadata?: { replyTo?: string, file?: File }) => void;
   handleTyping: (state: 'typing' | 'recording' | null) => void;
   startRecording: () => void;
   stopRecording: () => void;
   isRecording: boolean;
-  recordingSeconds: number;
   showAttachmentMenu: boolean;
   setShowAttachmentMenu: (s: boolean) => void;
   showEmojiPanel: boolean;
@@ -21,8 +20,6 @@ interface ChatFooterProps {
   setShowGifPicker: (s: boolean) => void;
   replyTo: Message | null;
   setReplyTo: (m: Message | null) => void;
-  editingMessage: Message | null;
-  setEditingMessage: (m: Message | null) => void;
   isUploadingAudio: boolean;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => void;
   attachmentRef: React.RefObject<HTMLInputElement>;
@@ -53,15 +50,12 @@ export const ChatFooter = (props: ChatFooterProps) => {
         startRecording={props.startRecording}
         stopRecording={props.stopRecording}
         isRecording={props.isRecording}
-        recordingSeconds={props.recordingSeconds}
         showAttachmentMenu={props.showAttachmentMenu}
         setShowAttachmentMenu={props.setShowAttachmentMenu}
         showEmojiPanel={props.showEmojiPanel}
         setShowEmojiPanel={props.setShowEmojiPanel}
         replyTo={props.replyTo}
         setReplyTo={props.setReplyTo}
-        editingMessage={props.editingMessage}
-        setEditingMessage={props.setEditingMessage}
         onFileSelect={props.onFileSelect}
         attachmentRef={props.attachmentRef}
         currentUser={props.currentUser}

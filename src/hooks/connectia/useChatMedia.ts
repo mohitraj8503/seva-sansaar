@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Profile } from '@/types';
-import { MediaUtils } from '@/utils/connectia/mediaUtils';
 
 const supabase = createClient();
 
@@ -12,8 +11,7 @@ interface UseChatMediaProps {
     text: string, 
     type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call', 
     fileUrl?: string,
-    retryId?: string,
-    metadata?: { thumbnailUrl?: string | null, width?: number, height?: number, blurHash?: string }
+    metadata?: { thumbnailUrl?: string | null, width?: number, height?: number, blurHash?: string, file?: File, replyTo?: string, id?: string }
   ) => void;
   handleTyping: (state: 'typing' | 'recording' | null) => void;
   setToast: (msg: string | null) => void;
@@ -112,17 +110,6 @@ export const useChatMedia = ({
     });
   };
 
-
-
-  const uploadFile = async (file: File | Blob, type: string, originalName: string) => {
-    if (!currentUser) return { publicUrl: null };
-    const path = `${currentUser.id}/${type}-${Date.now()}-${originalName.replace(/\s+/g, '_')}`;
-    const { error } = await supabase.storage.from('chat-media').upload(path, file);
-    if (error) return { publicUrl: null };
-    const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
-    return { publicUrl: data.publicUrl };
-  };
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).slice(0, 5);
     for (const file of files) {
@@ -130,40 +117,8 @@ export const useChatMedia = ({
       if (file.type.startsWith('image/')) actualType = 'image';
       else if (file.type.startsWith('video/')) actualType = 'video';
 
-      if (actualType === 'image') {
-        try {
-          // 1. Get dimensions
-          const dimensions = await MediaUtils.getImageDimensions(file);
-          
-          // 2. Compress, generate thumbnail, and generate blurhash in parallel
-          const [compressedBlob, thumbnailBlob, blurHash] = await Promise.all([
-            MediaUtils.compressImage(file),
-            MediaUtils.generateThumbnail(file),
-            MediaUtils.generateBlurHash(file)
-          ]);
-
-          // 3. Upload both
-          const [mainResult, thumbResult] = await Promise.all([
-            uploadFile(compressedBlob, 'image', file.name),
-            thumbnailBlob ? uploadFile(thumbnailBlob, 'thumb', `thumb_${file.name}`) : Promise.resolve({ publicUrl: null })
-          ]);
-
-          if (mainResult.publicUrl) {
-            sendMessage('', 'image', mainResult.publicUrl, undefined, {
-              thumbnailUrl: thumbResult.publicUrl,
-              width: dimensions.width,
-              height: dimensions.height,
-              blurHash: blurHash || undefined
-            });
-          }
-        } catch (err) {
-          console.error('Image processing failed', err);
-          setToast("Failed to process image");
-        }
-      } else {
-        const { publicUrl } = await uploadFile(file, actualType, file.name);
-        if (publicUrl) sendMessage(file.name, actualType, publicUrl);
-      }
+      // WhatsApp Rule: Send instantly with local preview, process in background
+      sendMessage('', actualType, undefined, { file });
     }
   };
 
