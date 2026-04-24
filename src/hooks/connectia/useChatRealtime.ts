@@ -16,6 +16,7 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!isUnlocked || !currentUser) return;
@@ -68,13 +69,30 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
           }
         } 
       })
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        setOnlineUsers(Object.keys(state));
-      })
       .subscribe(async (s) => { 
-        if (s === 'SUBSCRIBED') await channel.track({ key: currentUser.id, online_at: new Date().toISOString() }); 
+        if (s === 'SUBSCRIBED') {
+          await channel.track({ key: currentUser.id, online_at: new Date().toISOString() }); 
+          
+          // Rule 8: Presence Heartbeat (Feels live like WhatsApp)
+          heartbeatIntervalRef.current = setInterval(() => {
+            channel.send({
+              type: 'broadcast',
+              event: 'ping',
+              payload: { userId: currentUser.id }
+            });
+          }, 5000);
+        }
       });
+
+    // Handle Heartbeat Pings
+    channel.on('broadcast', { event: 'ping' }, (p) => {
+      setOnlineUsers(prev => prev.includes(p.payload.userId) ? prev : [...prev, p.payload.userId]);
+    });
+
+    // Rule 2: Message Seen Broadcast (No DB round-trip for critical path)
+    channel.on('broadcast', { event: 'message_seen' }, (p) => {
+      setMessages(prev => prev.map(m => m.id === p.payload.messageId ? { ...m, status: 'seen' } : m));
+    });
 
     const callChannel = supabase.channel('call-signals')
       .on('postgres_changes', { 
@@ -94,6 +112,7 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
     return () => { 
       supabase.removeChannel(channel); 
       supabase.removeChannel(callChannel);
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       channelRef.current = null; 
     };
   }, [currentUser, activePartner, isUnlocked, sharedSecret, setMessages, setUnreadCount, setOtherUserTyping, setOnlineUsers, setActiveCall, setLastMessage, scrollToBottom, showScrollBottom]);
@@ -108,5 +127,15 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
     }
   };
 
-  return { handleTyping };
+  const broadcastSeen = (messageId: string) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'message_seen',
+        payload: { messageId }
+      });
+    }
+  };
+
+  return { handleTyping, broadcastSeen };
 };

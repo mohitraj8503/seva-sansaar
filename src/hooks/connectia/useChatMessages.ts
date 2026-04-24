@@ -96,53 +96,65 @@ export const useChatMessages = (
       blur_hash: metadata?.blurHash
     };
 
-    // Update UI instantly
+    // 1. Update UI INSTANTLY (WhatsApp Rule: UI first)
     if (!retryId) {
       setMessages([...messages, newMsg]);
-      setTimeout(scrollToBottom, 100);
+      requestAnimationFrame(() => scrollToBottom());
     } else {
       updateMessageStatus(tempId, 'sending');
     }
 
-    try {
-      // 1. Encrypt if needed
-      const encrypted = await ConnectiaCrypto.encryptMessage(text, activePartner.public_key);
-      
-      // 2. Prepare payload (omit id to let Supabase generate it)
-      const { ...payload } = newMsg;
-      
-      // 3. Send to Supabase
-      const { data, error } = await createClient()
-        .from('messages')
-        .insert([{
-          ...payload,
-          ciphertext: encrypted.ciphertext,
-          nonce: encrypted.nonce,
-          text: '[Encrypted Message]',
-          is_encrypted: true
-        }])
-        .select()
-        .single();
+    // 2. BACKGROUND PROCESSING (Non-blocking)
+    (async () => {
+      try {
+        // --- SMART ENCRYPTION ---
+        let encrypted;
+        const { sharedSecretCache } = useChatStore.getState();
+        const cachedSecret = sharedSecretCache[activePartner.id];
 
-      if (error) throw error;
+        if (cachedSecret) {
+          // Fast path: use cached secret and inline encryption (no worker overhead for single msg)
+          encrypted = await ConnectiaCrypto.encryptInline(text, cachedSecret);
+        } else {
+          // Slow path: derive and cache
+          const { ciphertext, nonce, sharedSecret: newSecret } = await ConnectiaCrypto.encryptMessage(text, activePartner.public_key);
+          encrypted = { ciphertext, nonce };
+          if (newSecret) useChatStore.getState().setSharedSecretCache(activePartner.id, newSecret);
+        }
 
-      // 4. Success -> Update local DB and state
-      await db.messages.put({ ...data, isDecrypted: true, text: text.trim() });
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...data, isDecrypted: true, text: text.trim() } : m));
-      
-    } catch (err) {
-      console.error("Connectia: Send failed", err);
-      
-      // 5. Failure -> Offline Queue
-      await db.messages.put({ ...newMsg, status: 'failed' });
-      updateMessageStatus(tempId, 'failed');
-      
-      if (isOnline) {
-        setToast("Couldn't send message. Tap to retry.");
-      } else {
-        setToast("Message saved to offline queue.");
+        // --- MERGED PIPELINE ---
+        const supabase = createClient();
+        const { ...payload } = newMsg;
+
+        const [, supabaseResult] = await Promise.all([
+          db.messages.put({ ...newMsg, status: 'sending' }),
+          supabase
+            .from('messages')
+            .insert([{
+              ...payload,
+              ciphertext: encrypted.ciphertext,
+              nonce: encrypted.nonce,
+              text: '[Encrypted Message]',
+              is_encrypted: true
+            }])
+            .select()
+            .single()
+        ]);
+
+        if (supabaseResult.error) throw supabaseResult.error;
+
+        // --- SUCCESS SYNC ---
+        const finalMsg = { ...supabaseResult.data, isDecrypted: true, text: text.trim() };
+        await db.messages.put(finalMsg);
+        setMessages(prev => prev.map(m => m.id === tempId ? finalMsg : m));
+
+      } catch (err) {
+        console.error("Connectia: Async Send failed", err);
+        await db.messages.put({ ...newMsg, status: 'failed' });
+        updateMessageStatus(tempId, 'failed');
+        setToast(isOnline ? "Couldn't send. Tap to retry." : "Saved to offline queue.");
       }
-    }
+    })();
   }, [isUnlocked, currentUser, activePartner, messages, setMessages, scrollToBottom, updateMessageStatus, setToast, isOnline]);
 
   // --- OFFLINE RETRY LOGIC ---

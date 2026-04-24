@@ -167,7 +167,7 @@ export default function ConnectiaPage() {
     sendMessage
   } = useChatMessages(store.currentUser, store.activePartner, isUnlocked, setToast, scrollToBottom);
 
-  const { handleTyping } = useChatRealtime(() => {}, false);
+  const { handleTyping, broadcastSeen } = useChatRealtime(scrollToBottom, showScrollBottom);
 
   const isOpeningSystemUI = React.useRef(false);
 
@@ -411,6 +411,12 @@ export default function ConnectiaPage() {
                       messageMap={messageMap}
                       searchResults={store.searchResults}
                       starredIds={store.starredIds}
+                      onSeen={(id) => {
+                        broadcastSeen(id);
+                        // Update DB and UI in background
+                        store.updateMessage(id, { status: 'seen', seen: true });
+                        supabase.from('messages').update({ status: 'seen', seen: true }).eq('id', id).then();
+                      }}
                       onRetry={(m) => sendMessage(m.text, m.type, m.file_url || undefined, m.id)}
                   />
                 </div>

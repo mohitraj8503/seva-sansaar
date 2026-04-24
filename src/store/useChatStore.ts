@@ -54,6 +54,10 @@ interface ChatStore {
   isOnline: boolean;
   drafts: Record<string, string>;
   darkMode: boolean;
+  
+  // Performance Caches
+  sharedSecretCache: Record<string, Uint8Array>;
+  privateKeyCache: string | null;
 
   // --- ACTIONS ---
   setView: (view: ChatView) => void;
@@ -112,6 +116,8 @@ interface ChatStore {
   setIsOnline: (online: boolean) => void;
   setDraft: (userId: string, text: string) => void;
   setDarkMode: (dark: boolean) => void;
+  setSharedSecretCache: (partnerId: string, secret: Uint8Array) => void;
+  setPrivateKeyCache: (key: string | null) => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -164,6 +170,8 @@ export const useChatStore = create<ChatStore>((set) => ({
   isOnline: true,
   drafts: {},
   darkMode: true,
+  sharedSecretCache: {},
+  privateKeyCache: null,
 
   // --- ACTIONS ---
   setView: (view) => set({ view }),
@@ -272,4 +280,8 @@ export const useChatStore = create<ChatStore>((set) => ({
     drafts: { ...state.drafts, [userId]: text }
   })),
   setDarkMode: (darkMode) => set({ darkMode }),
+  setSharedSecretCache: (partnerId, secret) => set((state) => ({
+    sharedSecretCache: { ...state.sharedSecretCache, [partnerId]: secret }
+  })),
+  setPrivateKeyCache: (privateKeyCache) => set({ privateKeyCache }),
 }));

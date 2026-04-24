@@ -14,6 +14,7 @@ interface MessageListProps {
   searchResults: string[];
   starredIds: string[];
   onRetry: (m: Message) => void;
+  onSeen?: (id: string) => void;
 }
 
 export interface MessageListHandle {
@@ -21,7 +22,7 @@ export interface MessageListHandle {
 }
 
 export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(({
-  flatMessages, onScroll, currentUser, messageMap, searchResults, starredIds, onRetry
+  flatMessages, onScroll, currentUser, messageMap, searchResults, starredIds, onRetry, onSeen
 }, ref) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -102,7 +103,7 @@ export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(
         onCopy={(t) => { navigator.clipboard.writeText(t); }}
         onStar={toggleStar}
         onLightbox={setLightboxImage}
-        onSeen={(id) => updateMessage(id, { status: 'seen', seen: true })}
+        onSeen={(id) => onSeen ? onSeen(id) : updateMessage(id, { status: 'seen', seen: true })}
         replyToMessage={m.reply_to ? messageMap[m.reply_to] : undefined}
         isStarred={starredIds.includes(m.id)}
         isSearchResult={searchResults.includes(m.id)}

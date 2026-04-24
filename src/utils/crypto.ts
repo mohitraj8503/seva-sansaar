@@ -2,7 +2,19 @@ import _sodium from 'libsodium-wrappers';
 import { Message } from '@/types';
 import { CryptoWorkerManager } from '@/utils/connectia/workerManager';
 
+import { useChatStore } from '@/store/useChatStore';
+
 let sodium: typeof _sodium;
+
+// --- KEY CACHE (Rule 5: Load once, stay in memory) ---
+export const getPrivateKey = () => {
+  const cached = useChatStore.getState().privateKeyCache;
+  if (cached) return cached;
+  
+  const stored = localStorage.getItem('connectia_private_key');
+  if (stored) useChatStore.getState().setPrivateKeyCache(stored);
+  return stored;
+};
 
 export const initSodium = async () => {
   if (sodium) return sodium;
@@ -73,16 +85,22 @@ export const ConnectiaCrypto = {
    * High-level encryption for a message.
    */
   encryptMessage: async (text: string, theirPublicKeyBase64?: string | null) => {
-    if (!theirPublicKeyBase64) return { text, ciphertext: undefined, nonce: undefined };
+    if (!theirPublicKeyBase64) return { ciphertext: undefined, nonce: undefined };
     
-    // For simplicity, we assume we have the current user's private key in local storage
-    const myPrivateKeyBase64 = localStorage.getItem('connectia_private_key');
-    if (!myPrivateKeyBase64) return { text, ciphertext: undefined, nonce: undefined };
+    const myPrivateKeyBase64 = getPrivateKey();
+    if (!myPrivateKeyBase64) return { ciphertext: undefined, nonce: undefined };
 
     const sharedSecret = await ConnectiaCrypto.deriveSharedSecret(myPrivateKeyBase64, theirPublicKeyBase64);
     const { ciphertext, nonce } = await ConnectiaCrypto.encrypt(text, sharedSecret);
     
-    return { ciphertext, nonce };
+    return { ciphertext, nonce, sharedSecret };
+  },
+
+  /**
+   * Fast, inline encryption without worker overhead (Rule 4)
+   */
+  encryptInline: async (text: string, sharedSecret: Uint8Array) => {
+    return await ConnectiaCrypto.encrypt(text, sharedSecret);
   },
 
   /**
@@ -91,7 +109,7 @@ export const ConnectiaCrypto = {
   decryptBatch: async (messages: Message[], theirPublicKeyBase64?: string | null) => {
     if (!theirPublicKeyBase64) return messages;
     
-    const myPrivateKeyBase64 = localStorage.getItem('connectia_private_key');
+    const myPrivateKeyBase64 = getPrivateKey();
     if (!myPrivateKeyBase64) return messages;
 
     const sharedSecret = await ConnectiaCrypto.deriveSharedSecret(myPrivateKeyBase64, theirPublicKeyBase64);
