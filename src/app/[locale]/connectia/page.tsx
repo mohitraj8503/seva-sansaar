@@ -2,13 +2,14 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Phone, User } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { clsx } from 'clsx';
 import { useRouter as _useRouter } from '@/i18n/navigation';
 import { createClient } from '@/utils/supabase/client';
 
 // --- STORE ---
-import { useChatStore } from '@/store/useChatStore';
+import { useChatStore, ChatView } from '@/store/useChatStore';
 
 // --- TYPES ---
 import { Message } from '@/types';
@@ -101,6 +102,12 @@ export default function ConnectiaPage() {
     return result;
   }, [store.messages, store.otherUserTyping]);
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && store.view === 'welcome') {
+      store.setView('list');
+    }
+  }, [store.view, store.setView, store]);
+
   const messageMap = useMemo(() => {
     const map: Record<string, Message> = {};
     store.messages.forEach(m => { map[m.id] = m; });
@@ -150,7 +157,7 @@ export default function ConnectiaPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-black gap-6">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-black gap-6">
         <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
         <p className="text-white/40 font-black uppercase tracking-[0.3em] text-[10px]">Loading Workspace</p>
       </div>
@@ -195,7 +202,7 @@ export default function ConnectiaPage() {
       <main className="flex-1 relative flex flex-col overflow-hidden bg-black w-full">
         <AnimatePresence mode="wait" initial={false}>
           {store.view === 'welcome' && (
-             <motion.div key="w" className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#f8f9fa] text-center">
+             <motion.div key="w" className="flex flex-1 flex-col items-center justify-center bg-[#f8f9fa] text-center p-8">
                 <div className="w-32 h-32 bg-white rounded-[3rem] shadow-xl flex items-center justify-center mb-8">
                   <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500">
                     <MessageCircle size={32} />
@@ -316,6 +323,27 @@ export default function ConnectiaPage() {
             />
           )}
         </AnimatePresence>
+
+        {/* Mobile Bottom Navigation */}
+        <div className="md:hidden h-20 bg-white/80 backdrop-blur-2xl border-t border-gray-100/50 flex items-center justify-around px-6 safe-bottom shrink-0 relative z-50">
+           {[
+             { id: 'list', icon: <MessageCircle size={22} />, label: 'Chats' },
+             { id: 'calls', icon: <Phone size={22} />, label: 'Calls' },
+             { id: 'details', icon: <User size={22} />, label: 'Profile' }
+           ].map(item => (
+             <button 
+               key={item.id}
+               onClick={() => store.setView(item.id as ChatView)}
+               className={clsx(
+                 "flex flex-col items-center gap-1.5 transition-all active:scale-90",
+                 store.view === item.id ? "text-indigo-600" : "text-gray-400"
+               )}
+             >
+               {item.icon}
+               <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+             </button>
+           ))}
+        </div>
       </main>
 
       <ChatDialogs 

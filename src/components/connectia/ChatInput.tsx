@@ -111,7 +111,7 @@ export const ChatInput = ({
            </button>
            <textarea 
              placeholder="Type a message..."
-             className="flex-1 bg-transparent border-none outline-none text-[15px] font-medium text-black placeholder:text-gray-400 resize-none max-h-[120px] scrollbar-hide py-1"
+             className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium text-black placeholder:text-gray-400 resize-none max-h-[120px] scrollbar-hide py-1"
              rows={1}
              value={inputText}
              onChange={(e) => { 

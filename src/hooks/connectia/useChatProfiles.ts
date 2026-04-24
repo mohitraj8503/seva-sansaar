@@ -51,13 +51,22 @@ export const useChatProfiles = () => {
 
   useEffect(() => {
     const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile) {
-          setCurrentUser(profile);
-          fetchInitialData(profile);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          if (profile) {
+            setCurrentUser(profile);
+            await fetchInitialData(profile);
+          } else {
+            setIsLoading(false);
+          }
+        } else {
+          setIsLoading(false);
         }
+      } catch (err) {
+        console.error('Session init error:', err);
+        setIsLoading(false);
       }
     };
     initSession();
