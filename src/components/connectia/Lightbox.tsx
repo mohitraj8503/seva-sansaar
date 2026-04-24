@@ -16,7 +16,10 @@ export const Lightbox = ({ current, allMessages, onClose }: LightboxProps) => {
 
   useEffect(() => {
     if (current) {
-      const idx = images.findIndex(img => img.id === current.messageId);
+      let idx = images.findIndex(img => img.id === current.messageId);
+      if (idx === -1) {
+        idx = images.findIndex(img => img.file_url === current.url);
+      }
       setCurrentIndex(idx);
     }
   }, [current, images]);

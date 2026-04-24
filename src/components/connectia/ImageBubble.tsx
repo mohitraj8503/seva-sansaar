@@ -44,7 +44,7 @@ export const ImageBubble = ({ message, onLightbox }: ImageBubbleProps) => {
       >
         {/* BLUR PLACEHOLDER (BLURHASH OR THUMBNAIL) */}
         {!isLoaded && (
-          <div className="absolute inset-0 z-10">
+          <div className="absolute inset-0 z-10 pointer-events-none">
             {message.blur_hash ? (
               <Blurhash
                 hash={message.blur_hash}
@@ -81,7 +81,7 @@ export const ImageBubble = ({ message, onLightbox }: ImageBubbleProps) => {
 
         {/* LOADING SHIMMER IF NO THUMBNAIL */}
         {!message.thumbnail_url && !isLoaded && (
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-shimmer" />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-shimmer pointer-events-none" />
         )}
       </motion.div>
 
