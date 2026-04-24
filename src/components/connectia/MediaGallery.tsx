@@ -10,7 +10,7 @@ interface MediaGalleryProps {
   activeMediaTab: 'Images' | 'Videos' | 'Docs';
   setActiveMediaTab: (t: 'Images' | 'Videos' | 'Docs') => void;
   setShowMediaGallery: (s: boolean) => void;
-  setLightboxImage: (i: string | null) => void;
+  setLightboxImage: (i: { url: string; messageId: string } | null) => void;
 }
 
 export const MediaGallery = ({ 
@@ -71,7 +71,7 @@ export const MediaGallery = ({
           <div 
             key={m.id} 
             className="aspect-square bg-white/5 rounded-2xl overflow-hidden relative group cursor-pointer border border-white/5 hover:border-indigo-500/50 transition-all" 
-            onClick={() => { if(m.type === 'image' && m.file_url) setLightboxImage(m.file_url); }}
+            onClick={() => { if(m.type === 'image' && m.file_url) setLightboxImage({ url: m.file_url, messageId: m.id }); }}
           >
             {m.type === 'image' ? (
               <Image 

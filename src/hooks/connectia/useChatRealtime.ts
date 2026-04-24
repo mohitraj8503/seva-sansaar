@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Message, Call, Profile } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { ConnectiaCrypto } from '@/utils/crypto';
 import { useChatStore } from '@/store/useChatStore';
 import { CryptoWorkerManager } from '@/utils/connectia/workerManager';
 

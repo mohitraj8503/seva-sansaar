@@ -13,6 +13,7 @@ interface MessageListProps {
   messageMap: Record<string, Message>;
   searchResults: string[];
   starredIds: string[];
+  onRetry: (m: Message) => void;
 }
 
 export interface MessageListHandle {
@@ -20,7 +21,7 @@ export interface MessageListHandle {
 }
 
 export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(({
-  flatMessages, onScroll, currentUser, messageMap, searchResults, starredIds
+  flatMessages, onScroll, currentUser, messageMap, searchResults, starredIds, onRetry
 }, ref) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -105,6 +106,7 @@ export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(
         replyToMessage={m.reply_to ? messageMap[m.reply_to] : undefined}
         isStarred={starredIds.includes(m.id)}
         isSearchResult={searchResults.includes(m.id)}
+        onRetry={onRetry}
       />
     );
   };

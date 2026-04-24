@@ -17,8 +17,8 @@ export const useChatMessages = (
   const [hasMore, setHasMore] = useState(true);
 
   const updateMessageStatus = useCallback((id: string, status: Message['status']) => {
-    setMessages(messages.map(m => m.id === id ? { ...m, status } : m));
-  }, [messages, setMessages]);
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, status } : m));
+  }, [setMessages]);
 
   const decryptMessages = useCallback(async (msgs: Message[]) => {
     if (!activePartner?.public_key) return msgs;
@@ -67,7 +67,13 @@ export const useChatMessages = (
     fetchMessages();
   }, [fetchMessages]);
 
-  const sendMessage = useCallback(async (text: string, type: Message['type'] = 'text', fileUrl?: string, retryId?: string) => {
+  const sendMessage = useCallback(async (
+    text: string, 
+    type: Message['type'] = 'text', 
+    fileUrl?: string, 
+    retryId?: string,
+    metadata?: { thumbnailUrl?: string | null, width?: number, height?: number, blurHash?: string }
+  ) => {
     if (!isUnlocked || !currentUser || !activePartner) return;
     if (!text.trim() && !fileUrl) return;
 
@@ -83,7 +89,11 @@ export const useChatMessages = (
       file_url: fileUrl || null,
       created_at: now,
       status: 'sending',
-      seen: false
+      seen: false,
+      thumbnail_url: metadata?.thumbnailUrl,
+      width: metadata?.width,
+      height: metadata?.height,
+      blur_hash: metadata?.blurHash
     };
 
     // Update UI instantly
@@ -98,32 +108,42 @@ export const useChatMessages = (
       // 1. Encrypt if needed
       const encrypted = await ConnectiaCrypto.encryptMessage(text, activePartner.public_key);
       
-      // 2. Send to Supabase
+      // 2. Prepare payload (omit id to let Supabase generate it)
+      const { ...payload } = newMsg;
+      
+      // 3. Send to Supabase
       const { data, error } = await createClient()
         .from('messages')
         .insert([{
-          ...newMsg,
-          id: undefined, // Let Supabase generate ID
+          ...payload,
           ciphertext: encrypted.ciphertext,
           nonce: encrypted.nonce,
-          text: '[Encrypted Message]'
+          text: '[Encrypted Message]',
+          is_encrypted: true
         }])
         .select()
         .single();
 
       if (error) throw error;
 
-      // 3. Success -> Update local DB and state
+      // 4. Success -> Update local DB and state
       await db.messages.put({ ...data, isDecrypted: true, text: text.trim() });
-      setMessages(messages.map(m => m.id === tempId ? { ...data, isDecrypted: true, text: text.trim() } : m));
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...data, isDecrypted: true, text: text.trim() } : m));
       
-    } catch {
-      // 4. Failure -> Offline Queue
+    } catch (err) {
+      console.error("Connectia: Send failed", err);
+      
+      // 5. Failure -> Offline Queue
       await db.messages.put({ ...newMsg, status: 'failed' });
       updateMessageStatus(tempId, 'failed');
-      setToast("Message failed. Saved to offline queue.");
+      
+      if (isOnline) {
+        setToast("Couldn't send message. Tap to retry.");
+      } else {
+        setToast("Message saved to offline queue.");
+      }
     }
-  }, [isUnlocked, currentUser, activePartner, messages, setMessages, scrollToBottom, updateMessageStatus, setToast]);
+  }, [isUnlocked, currentUser, activePartner, messages, setMessages, scrollToBottom, updateMessageStatus, setToast, isOnline]);
 
   // --- OFFLINE RETRY LOGIC ---
   useEffect(() => {
@@ -131,7 +151,12 @@ export const useChatMessages = (
       const retryFailedMessages = async () => {
         const failedMsgs = await db.messages.where('status').equals('failed').toArray();
         for (const m of failedMsgs) {
-          sendMessage(m.text || '', m.type, m.file_url || undefined, m.id);
+          sendMessage(m.text || '', m.type, m.file_url || undefined, m.id, {
+            thumbnailUrl: m.thumbnail_url,
+            width: m.width,
+            height: m.height,
+            blurHash: m.blur_hash
+          });
         }
       };
       retryFailedMessages();

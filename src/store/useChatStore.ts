@@ -35,7 +35,7 @@ interface ChatStore {
   editingMessage: Message | null;
   showMediaGallery: boolean;
   activeMediaTab: 'Images' | 'Videos' | 'Docs';
-  lightboxImage: string | null;
+  lightboxImage: { url: string; messageId: string } | null;
   showSpecialDates: boolean;
   showStarred: boolean;
   starredIds: string[];
@@ -92,7 +92,7 @@ interface ChatStore {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowMediaGallery: (show: boolean) => void;
   setActiveMediaTab: (tab: 'Images' | 'Videos' | 'Docs') => void;
-  setLightboxImage: (url: string | null) => void;
+  setLightboxImage: (data: { url: string; messageId: string } | null) => void;
   setShowSpecialDates: (show: boolean) => void;
   setShowStarred: (show: boolean) => void;
   setStarredIds: (ids: string[]) => void;

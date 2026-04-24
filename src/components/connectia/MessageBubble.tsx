@@ -2,9 +2,8 @@ import React, { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MoreVertical, Reply, Trash2, Copy, Star, Smile, 
-  FileText, Download, Phone, Video
+  FileText, Download, Phone, Video, RefreshCw
 } from 'lucide-react';
-import Image from "next/image";
 import { clsx } from 'clsx';
 import { Message } from '@/types';
 import { formatMsgTime, extractUrl } from '@/utils/connectia/helpers';
@@ -12,6 +11,7 @@ import { MessageStatusTicks } from './MessageStatusTicks';
 import { LazyVideo } from './LazyVideo';
 import { CustomAudioPlayer } from './CustomAudioPlayer';
 import { LinkPreview } from './LinkPreview';
+import { ImageBubble } from './ImageBubble';
 import { useLongPress } from '@/hooks/connectia/useLongPress';
 
 interface MessageBubbleProps {
@@ -24,17 +24,18 @@ interface MessageBubbleProps {
   onEdit: (m: Message) => void;
   onCopy: (t: string) => void;
   onStar: (id: string) => void;
-  onLightbox: (url: string) => void;
+  onLightbox: (data: { url: string; messageId: string }) => void;
   onSeen: (id: string) => void;
   replyToMessage?: Message;
   isStarred: boolean;
   isSearchResult: boolean;
+  onRetry: (m: Message) => void;
 }
 
 export const MessageBubble = memo(({
   message, isMe, onReact, onReply, onDeleteMe, onDeleteEveryone,
   onEdit, onCopy, onStar, onLightbox, onSeen, replyToMessage,
-  isStarred, isSearchResult
+  isStarred, isSearchResult, onRetry
 }: MessageBubbleProps) => {
   const [showOptions, setShowOptions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
@@ -69,8 +70,9 @@ export const MessageBubble = memo(({
             whileTap={{ scale: 0.97 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             className={clsx(
-              "relative px-5 py-3 rounded-[2rem] shadow-sm transition-all",
+              "relative rounded-[2rem] shadow-sm transition-all overflow-hidden",
               isMe ? "bg-indigo-600 text-white rounded-tr-lg" : "bg-white text-black border border-gray-100 rounded-tl-lg",
+              message.type === 'image' ? "p-1" : "px-5 py-3",
               message.status === 'failed' && "border-rose-500 opacity-80"
             )}
           >
@@ -95,10 +97,7 @@ export const MessageBubble = memo(({
                 )}
 
                 {message.type === 'image' && (
-                  <div className="rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onLightbox(message.file_url!)}>
-                    <Image src={message.file_url!} alt="" width={300} height={300} loading="lazy" className="object-cover max-h-[400px] w-full" />
-                    {message.text && message.text !== '[Encrypted Message]' && <p className="mt-2 text-sm">{message.text}</p>}
-                  </div>
+                  <ImageBubble message={message} onLightbox={(url) => onLightbox({ url, messageId: message.id })} />
                 )}
 
                 {message.type === 'video' && <LazyVideo src={message.file_url!} />}
@@ -137,6 +136,17 @@ export const MessageBubble = memo(({
               {isMe && <MessageStatusTicks status={message.status} />}
               {isStarred && <Star size={10} fill="currentColor" />}
             </div>
+            
+            {/* RETRY BUTTON FOR FAILED MESSAGES */}
+            {message.status === 'failed' && isMe && (
+              <button 
+                onClick={() => onRetry(message)}
+                className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-500 text-white px-3 py-1.5 rounded-full hover:bg-rose-600 transition-colors shadow-lg"
+              >
+                <RefreshCw size={10} />
+                Retry Sending
+              </button>
+            )}
           </motion.div>
 
           {/* REACTIONS DISPLAY */}

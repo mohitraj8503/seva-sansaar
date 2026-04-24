@@ -1,13 +1,20 @@
 import { useState, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Profile } from '@/types';
+import { MediaUtils } from '@/utils/connectia/mediaUtils';
 
 const supabase = createClient();
 
 interface UseChatMediaProps {
   currentUser: Profile | null;
   activePartner: Profile | null;
-  sendMessage: (text: string, type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call', fileUrl?: string) => void;
+  sendMessage: (
+    text: string, 
+    type: 'text' | 'image' | 'audio' | 'file' | 'video' | 'call', 
+    fileUrl?: string,
+    retryId?: string,
+    metadata?: { thumbnailUrl?: string | null, width?: number, height?: number, blurHash?: string }
+  ) => void;
   handleTyping: (state: 'typing' | 'recording' | null) => void;
   setToast: (msg: string | null) => void;
 }
@@ -105,33 +112,12 @@ export const useChatMedia = ({
     });
   };
 
-  const compressImage = async (file: File): Promise<Blob> => {
-    return new Promise((resolve) => {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const MAX_SIZE = 1200;
-        if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-        else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.8);
-      };
-    });
-  };
 
-  const uploadFile = async (file: File, type: string) => {
+
+  const uploadFile = async (file: File | Blob, type: string, originalName: string) => {
     if (!currentUser) return { publicUrl: null };
-    let fileToUpload: File | Blob = file;
-    if (file.type.startsWith('image/')) fileToUpload = await compressImage(file);
-
-    const path = `${currentUser.id}/${type}-${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-    const { error } = await supabase.storage.from('chat-media').upload(path, fileToUpload);
+    const path = `${currentUser.id}/${type}-${Date.now()}-${originalName.replace(/\s+/g, '_')}`;
+    const { error } = await supabase.storage.from('chat-media').upload(path, file);
     if (error) return { publicUrl: null };
     const { data } = supabase.storage.from('chat-media').getPublicUrl(path);
     return { publicUrl: data.publicUrl };
@@ -141,11 +127,43 @@ export const useChatMedia = ({
     const files = Array.from(e.target.files || []).slice(0, 5);
     for (const file of files) {
       let actualType: 'image' | 'video' | 'file' = 'file';
-      if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name)) actualType = 'image';
-      else if (file.type.startsWith('video/') || /\.(mp4|mov|avi|wmv)$/i.test(file.name)) actualType = 'video';
+      if (file.type.startsWith('image/')) actualType = 'image';
+      else if (file.type.startsWith('video/')) actualType = 'video';
 
-      const { publicUrl } = await uploadFile(file, actualType);
-      if (publicUrl) sendMessage(file.name, actualType, publicUrl);
+      if (actualType === 'image') {
+        try {
+          // 1. Get dimensions
+          const dimensions = await MediaUtils.getImageDimensions(file);
+          
+          // 2. Compress, generate thumbnail, and generate blurhash in parallel
+          const [compressedBlob, thumbnailBlob, blurHash] = await Promise.all([
+            MediaUtils.compressImage(file),
+            MediaUtils.generateThumbnail(file),
+            MediaUtils.generateBlurHash(file)
+          ]);
+
+          // 3. Upload both
+          const [mainResult, thumbResult] = await Promise.all([
+            uploadFile(compressedBlob, 'image', file.name),
+            thumbnailBlob ? uploadFile(thumbnailBlob, 'thumb', `thumb_${file.name}`) : Promise.resolve({ publicUrl: null })
+          ]);
+
+          if (mainResult.publicUrl) {
+            sendMessage('', 'image', mainResult.publicUrl, undefined, {
+              thumbnailUrl: thumbResult.publicUrl,
+              width: dimensions.width,
+              height: dimensions.height,
+              blurHash: blurHash || undefined
+            });
+          }
+        } catch (err) {
+          console.error('Image processing failed', err);
+          setToast("Failed to process image");
+        }
+      } else {
+        const { publicUrl } = await uploadFile(file, actualType, file.name);
+        if (publicUrl) sendMessage(file.name, actualType, publicUrl);
+      }
     }
   };
 

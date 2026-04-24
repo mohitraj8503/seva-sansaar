@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Plus, Archive } from 'lucide-react';
+import { Bell, Plus, Archive, MoreVertical } from 'lucide-react';
 import Image from "next/image";
 import { clsx } from 'clsx';
 import { Profile, Message } from '@/types';
@@ -44,9 +44,14 @@ export const RecentChats = ({
             </p>
             <h1 className="text-[34px] font-black text-white tracking-tight">Connectia</h1>
           </div>
-          <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white/80 transition-all active:scale-90">
-            <Bell size={24} />
-          </button>
+          <div className="flex gap-2">
+            <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white/80 transition-all active:scale-90">
+              <Bell size={24} />
+            </button>
+            <button className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white/80 transition-all active:scale-90">
+              <MoreVertical size={24} />
+            </button>
+          </div>
         </div>
         
         <div className="space-y-4">
@@ -113,9 +118,12 @@ export const RecentChats = ({
                 <div className="flex-1 min-w-0">
                    <div className="flex justify-between items-center mb-1">
                       <h3 className="font-black text-black text-base group-hover:text-indigo-600 transition-colors">{u.name}</h3>
-                      <span className="text-[10px] font-bold text-black/30">
-                        {formatMsgTime(lastMessages[u.id]?.created_at || new Date().toISOString())}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-black/30">
+                          {formatMsgTime(lastMessages[u.id]?.created_at || new Date().toISOString())}
+                        </span>
+                        <MoreVertical size={14} className="text-black/20" />
+                      </div>
                    </div>
                    <div className="flex justify-between items-center">
                       <p className="text-sm truncate text-black/40 font-medium">

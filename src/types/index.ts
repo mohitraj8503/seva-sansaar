@@ -33,6 +33,12 @@ export interface Message {
   ciphertext?: string;
   nonce?: string;
   expires_at?: string | null;
+  // Media Metadata
+  thumbnail_url?: string | null;
+  width?: number;
+  height?: number;
+  blur_hash?: string;
+  voice_url?: string | null;
 }
 
 export interface Call {

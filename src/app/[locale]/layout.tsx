@@ -83,22 +83,22 @@ export const metadata: Metadata = {
   verification: {
     google: "google-site-verification-id", // Replace with actual Google verification ID
   },
-  manifest: "/manifest.json",
+  manifest: "/manifest.json?v=3",
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa-icon-192.png", sizes: "192x192", type: "image/png" },
     ],
-    shortcut: ["/icon-192.png"],
+    shortcut: ["/pwa-icon-192.png"],
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Sevasansaar",
-    startupImage: ["/icon-512.png"],
+    statusBarStyle: "black-translucent",
+    title: "Seva Sansaar",
+    startupImage: ["/pwa-icon-512.png"],
   },
   formatDetection: {
     telephone: false,

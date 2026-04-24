@@ -400,6 +400,7 @@ export default function ConnectiaPage() {
                   setShowClearConfirm={store.setShowClearConfirm}
                   handleExportChat={handleExportChat}
                   currentUser={store.currentUser}
+                  darkMode={darkMode}
                 />
 
                 <div className="flex-1 relative z-10">
@@ -410,6 +411,7 @@ export default function ConnectiaPage() {
                       messageMap={messageMap}
                       searchResults={store.searchResults}
                       starredIds={store.starredIds}
+                      onRetry={(m) => sendMessage(m.text, m.type, m.file_url || undefined, m.id)}
                   />
                 </div>
 
@@ -536,7 +538,8 @@ export default function ConnectiaPage() {
           )}
           {store.lightboxImage && (
             <Lightbox 
-              src={store.lightboxImage} 
+              current={store.lightboxImage} 
+              allMessages={store.messages}
               onClose={() => store.setLightboxImage(null)} 
             />
           )}

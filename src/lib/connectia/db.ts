@@ -23,10 +23,10 @@ export class ConnectiaDatabase extends Dexie {
   }
 
   async cleanupOldData() {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     return await this.messages
       .where('created_at')
-      .below(sevenDaysAgo)
+      .below(oneDayAgo)
       .delete();
   }
 }

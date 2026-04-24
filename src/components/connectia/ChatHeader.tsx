@@ -37,6 +37,7 @@ interface ChatHeaderProps {
   setShowClearConfirm: (s: boolean) => void;
   handleExportChat: () => void;
   currentUser: Profile | null;
+  darkMode: boolean;
 }
 
 export const ChatHeader = ({
@@ -47,11 +48,14 @@ export const ChatHeader = ({
   expiryTime, setExpiryTime,
   setToast, setShowMediaGallery, setShowSpecialDates, setShowStarred,
   setShowSetup, setShowWallpaperSheet, setShowClearConfirm,
-  handleExportChat, currentUser
+  handleExportChat, currentUser, darkMode
 }: ChatHeaderProps) => {
   return (
     <div className="flex flex-col w-full">
-      <header className="px-4 md:px-8 bg-white/80 backdrop-blur-2xl border-b border-gray-100/50 flex items-center justify-between sticky top-0 z-[70] pt-safe pb-4">
+      <header className={clsx(
+        "px-4 md:px-8 backdrop-blur-2xl border-b flex items-center justify-between sticky top-0 z-[70] pt-safe pb-4 transition-colors duration-300",
+        darkMode ? "bg-black/80 border-white/10" : "bg-white/80 border-gray-100/50"
+      )}>
         <div className="flex items-center gap-5">
            <div 
              onClick={() => setView('list')} 
@@ -69,7 +73,7 @@ export const ChatHeader = ({
                  />
               </div>
               <div className="flex flex-col">
-                 <h3 className="text-black font-black text-lg tracking-tight leading-tight">
+                 <h3 className={clsx("font-black text-lg tracking-tight leading-tight", darkMode ? "text-white" : "text-black")}>
                    {activePartner?.name}
                  </h3>
                  <p className={clsx(
@@ -99,7 +103,10 @@ export const ChatHeader = ({
           </button>
           <button 
             onClick={() => setShowMenu(!showMenu)} 
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-gray-400 hover:text-black hover:bg-gray-50 transition-all"
+            className={clsx(
+              "w-12 h-12 flex items-center justify-center rounded-xl transition-all",
+              darkMode ? "text-white/60 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-black hover:bg-gray-50"
+            )}
             aria-label="Menu"
           >
             <MoreVertical size={22} />
@@ -113,7 +120,10 @@ export const ChatHeader = ({
             initial={{ opacity: 0, y: 10 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0, y: 10 }} 
-            className="absolute right-6 top-24 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col z-[80] min-w-[180px]"
+            className={clsx(
+              "absolute right-6 top-24 rounded-2xl shadow-2xl border overflow-hidden flex flex-col z-[80] min-w-[200px]",
+              darkMode ? "bg-[#1a1a1a] border-white/10" : "bg-white border-gray-100"
+            )}
           >
             <button onClick={() => { setIsSearchOpen(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><Search size={16} /> Search in Chat</button>
             <button onClick={() => { setShowMediaGallery(true); setShowMenu(false); }} className="px-5 py-3 hover:bg-gray-50 flex items-center gap-3 text-xs text-gray-700 font-bold border-b border-gray-50"><ImageIcon size={16} /> View Media</button>

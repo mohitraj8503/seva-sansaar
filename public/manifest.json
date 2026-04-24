@@ -1,6 +1,6 @@
 {
-  "name": "Sevasansaar",
-  "short_name": "Sevasansaar",
+  "name": "Seva Sansaar",
+  "short_name": "SevaSansaar",
   "description": "Private premium chat and Bharat's digital infrastructure.",
   "start_url": "/connectia",
   "display": "standalone",
@@ -9,28 +9,16 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/pwa-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-512.png",
+      "src": "/pwa-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
