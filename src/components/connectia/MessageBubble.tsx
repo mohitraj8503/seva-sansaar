@@ -50,16 +50,24 @@ export const MessageBubble = memo(({
   return (
     <div 
       className={clsx(
-        "flex flex-col mb-4 px-4 md:px-8 max-w-full",
+        "flex flex-col mb-4 px-4 md:px-8 max-w-full hover:bg-black/5 transition-colors group/bubble",
         isMe ? "items-end" : "items-start",
         isSearchResult && "bg-indigo-50/50 rounded-2xl py-2"
       )}
       {...longPress}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setShowOptions(true);
+      }}
     >
       <div className={clsx("flex items-end gap-2 max-w-[85%] md:max-w-[70%] group", isMe ? "flex-row-reverse" : "flex-row")}>
         <div className="relative">
           <motion.div 
             layoutId={message.id}
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             className={clsx(
               "relative px-5 py-3 rounded-[2rem] shadow-sm transition-all",
               isMe ? "bg-indigo-600 text-white rounded-tr-lg" : "bg-white text-black border border-gray-100 rounded-tl-lg",
@@ -88,7 +96,7 @@ export const MessageBubble = memo(({
 
                 {message.type === 'image' && (
                   <div className="rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onLightbox(message.file_url!)}>
-                    <Image src={message.file_url!} alt="" width={300} height={300} className="object-cover max-h-[400px] w-full" />
+                    <Image src={message.file_url!} alt="" width={300} height={300} loading="lazy" className="object-cover max-h-[400px] w-full" />
                     {message.text && message.text !== '[Encrypted Message]' && <p className="mt-2 text-sm">{message.text}</p>}
                   </div>
                 )}

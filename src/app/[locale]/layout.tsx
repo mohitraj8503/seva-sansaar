@@ -3,9 +3,6 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { Inter, Noto_Sans_Devanagari, Noto_Serif, Poppins } from "next/font/google";
 import { AuthProvider } from "@/hooks/useAuth";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import MobileTabBar from "@/components/MobileTabBar";
 import "../globals.css";
 
 const inter = Inter({
@@ -37,9 +34,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Seva Sansaar | Verified Local Services in India",
+  title: "Sevasansaar | Bharat's Digital Infrastructure",
   description:
-    "Book background-verified electricians, tutors, plumbers, and more in Jamshedpur. Seva Sansaar is Bharat's digital service infrastructure for trusted local experts with zero commission and transparent pricing.",
+    "Private premium chat and local services. Sevasansaar is Bharat's digital service infrastructure.",
   keywords: ["Seva Sansaar", "local services Jamshedpur", "verified electricians India", "book tutor Jamshedpur", "plumbing services Jamshedpur", "Bharat digital services", "Digital India", "local experts", "home services"],
   authors: [{ name: "Mohit Raj" }],
   metadataBase: new URL("https://sevasansaar.live"),
@@ -62,10 +59,10 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Seva Sansaar | Trusted Local Services",
+    title: "Sevasansaar | Trusted Local Services",
     description: "Connect verified local professionals in your city. Zero commission, direct access.",
     url: "https://sevasansaar.live",
-    siteName: "Seva Sansaar",
+    siteName: "Sevasansaar",
     images: [
       {
         url: "/logo-horizontal.png",
@@ -87,10 +84,21 @@ export const metadata: Metadata = {
     google: "google-site-verification-id", // Replace with actual Google verification ID
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: ["/icon-192.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Seva Sansaar",
+    title: "Sevasansaar",
+    startupImage: ["/icon-512.png"],
   },
   formatDetection: {
     telephone: false,
@@ -106,6 +114,8 @@ export const viewport = {
   viewportFit: "cover",
 };
 
+import { LayoutWrapper } from '@/components/LayoutWrapper';
+
 export default async function RootLayout({
   children,
   params,
@@ -118,27 +128,15 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={`${inter.variable} ${notoHindi.variable} ${notoSerifLatin.variable} ${poppins.variable}`} data-scroll-behavior="smooth">
-      <body className="bg-white font-sans text-gray-900 antialiased">
+      <body className="bg-white font-sans text-gray-900 antialiased overflow-x-hidden">
         <AuthProvider>
           <NextIntlClientProvider messages={messages}>
-            <a href="#main-content" className="skip-to-main">
-              Skip to main content
-            </a>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <main
-                id="main-content"
-                className="flex-1 pb-24 md:pb-0"
-                tabIndex={-1}
-              >
-                {children}
-              </main>
-              <Footer />
-            </div>
-            <MobileTabBar />
+            <LayoutWrapper>{children}</LayoutWrapper>
           </NextIntlClientProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
+
+

@@ -1,5 +1,6 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { ArrowDown } from 'lucide-react';
 import { Message, Profile } from '@/types';
 import { MessageBubble } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
@@ -14,21 +15,46 @@ interface MessageListProps {
   starredIds: string[];
 }
 
-export const MessageList = memo(({
+export interface MessageListHandle {
+  scrollToBottom: () => void;
+}
+
+export const MessageList = memo(forwardRef<MessageListHandle, MessageListProps>(({
   flatMessages, onScroll, currentUser, messageMap, searchResults, starredIds
-}: MessageListProps) => {
+}, ref) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [showNewMessageButton, setShowNewMessageButton] = useState(false);
+  const prevMessagesLength = useRef(flatMessages.length);
+
   const {
     setReplyTo, handleDeleteMe, handleDeleteEveryone,
     setEditingMessage, setInputText, toggleStar,
     setLightboxImage, updateMessage
   } = useChatStore();
 
-  useEffect(() => {
-    if (virtuosoRef.current) {
-      virtuosoRef.current.scrollToIndex({ index: flatMessages.length - 1, behavior: 'smooth' });
-    }
+  const scrollToBottom = useCallback(() => {
+    virtuosoRef.current?.scrollToIndex({ index: flatMessages.length - 1, behavior: 'smooth' });
+    setShowNewMessageButton(false);
   }, [flatMessages.length]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom
+  }));
+
+  useEffect(() => {
+    const isNewMessage = flatMessages.length > prevMessagesLength.current;
+    
+    if (isNewMessage) {
+      if (atBottom) {
+        scrollToBottom();
+      } else {
+        setShowNewMessageButton(true);
+      }
+    }
+    
+    prevMessagesLength.current = flatMessages.length;
+  }, [flatMessages.length, atBottom, scrollToBottom]);
 
   const renderItem = (index: number) => {
     const item = flatMessages[index];
@@ -84,18 +110,34 @@ export const MessageList = memo(({
   };
 
   return (
-    <Virtuoso
-      ref={virtuosoRef}
-      data={flatMessages}
-      initialTopMostItemIndex={flatMessages.length - 1}
-      itemContent={(index) => renderItem(index)}
-      atBottomStateChange={onScroll}
-      followOutput="smooth"
-      className="scrollbar-hide px-2 md:px-0 h-full w-full"
-      style={{ height: '100%', width: '100%' }}
-      increaseViewportBy={200}
-    />
+    <div className="relative h-full w-full">
+      <Virtuoso
+        ref={virtuosoRef}
+        data={flatMessages}
+        initialTopMostItemIndex={flatMessages.length - 1}
+        itemContent={(index) => renderItem(index)}
+        atBottomStateChange={(isAtBottom) => {
+          setAtBottom(isAtBottom);
+          if (isAtBottom) setShowNewMessageButton(false);
+          onScroll?.(isAtBottom);
+        }}
+        atBottomThreshold={200}
+        className="scrollbar-hide px-2 md:px-0 h-full w-full"
+        style={{ height: '100%', width: '100%' }}
+        increaseViewportBy={400}
+      />
+
+      {showNewMessageButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full shadow-2xl animate-bounce z-50 flex items-center gap-2 px-4"
+        >
+          <ArrowDown size={18} />
+          <span className="text-xs font-black uppercase tracking-wider">New Messages</span>
+        </button>
+      )}
+    </div>
   );
-});
+}));
 
 MessageList.displayName = 'MessageList';

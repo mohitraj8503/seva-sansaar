@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, LogOut } from 'lucide-react';
 import { Profile } from '@/types';
 import dynamic from 'next/dynamic';
+import { useChatStore } from '@/store/useChatStore';
+import { clsx } from 'clsx';
 
 const ProfileAvatar = dynamic(() => import('@/components/profile/ProfileAvatar').then(mod => mod.ProfileAvatar), { ssr: false });
 const ProfileInfo = dynamic(() => import('@/components/profile/ProfileInfo').then(mod => mod.ProfileInfo), { ssr: false });
@@ -30,12 +32,11 @@ export const UserProfileView = ({
       animate={{ opacity: 1, x: 0 }} 
       className="flex-1 flex flex-col bg-black overflow-y-auto scrollbar-hide w-full"
       style={{ 
-        height: '100dvh',
-        paddingBottom: 'calc(env(safe-area-inset-bottom) + 90px)',
+        paddingBottom: '120px',
         WebkitOverflowScrolling: 'touch'
       }}
     >
-       <header className="p-6 safe-top flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-md z-50 border-b border-white/5">
+       <header className="p-6 pt-safe pb-6 flex items-center justify-between sticky top-0 bg-black/80 backdrop-blur-md z-50 border-b border-white/5">
           <div onClick={() => setView('list')} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white cursor-pointer active:scale-90 transition-all">
             <ChevronLeft size={24} />
           </div>
@@ -65,6 +66,26 @@ export const UserProfileView = ({
                 onTriggerLockSetup={() => setShowSetup(true)} 
               />
               <ChatStats user={currentUser} />
+              
+              <div className="w-full bg-white/5 p-6 rounded-[2.5rem] border border-white/10 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-white font-bold">Dark Mode</span>
+                  <span className="text-white/40 text-[10px] uppercase font-black tracking-widest">Premium Theme</span>
+                </div>
+                <button 
+                  onClick={() => useChatStore.getState().setDarkMode(!useChatStore.getState().darkMode)}
+                  className={clsx(
+                    "w-14 h-8 rounded-full p-1 transition-all duration-500",
+                    useChatStore.getState().darkMode ? "bg-indigo-600" : "bg-gray-700"
+                  )}
+                >
+                  <div className={clsx(
+                    "w-6 h-6 bg-white rounded-full transition-all duration-500 transform",
+                    useChatStore.getState().darkMode ? "translate-x-6" : "translate-x-0"
+                  )} />
+                </button>
+              </div>
+
               <DangerZone user={currentUser} />
             </>
           )}

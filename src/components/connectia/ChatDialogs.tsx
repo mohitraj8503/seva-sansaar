@@ -18,7 +18,10 @@ interface ChatDialogsProps {
   handleClearChat: () => void;
   showWallpaperSheet: boolean;
   setShowWallpaperSheet: (s: boolean) => void;
-  setPresetWallpaper: (g: string) => void;
+  wallpaperUrl: string | null;
+  setWallpaperUrl: (url: string | null) => void;
+  setWallpaper: (g: string | null) => void;
+  setToast: (m: string | null) => void;
   handleWallpaperUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeWallpaper: () => void;
   isOpeningSystemUI: React.MutableRefObject<boolean>;
@@ -31,7 +34,7 @@ export const ChatDialogs = ({
   showSpecialDates, setShowSpecialDates, specialDates,
   showLogoutConfirm, setShowLogoutConfirm, handleLogout,
   showClearConfirm, setShowClearConfirm, handleClearChat,
-  showWallpaperSheet, setShowWallpaperSheet, setPresetWallpaper, handleWallpaperUpload, removeWallpaper, isOpeningSystemUI,
+  showWallpaperSheet, setShowWallpaperSheet, wallpaperUrl, setWallpaperUrl, setWallpaper, setToast, handleWallpaperUpload, removeWallpaper, isOpeningSystemUI,
   showSetup, setShowSetup, currentUser
 }: ChatDialogsProps) => {
   return (
@@ -117,7 +120,7 @@ export const ChatDialogs = ({
                   ].map((g, i) => (
                     <button 
                       key={i} 
-                      onClick={() => setPresetWallpaper(g)}
+                      onClick={() => setWallpaper(g)}
                       className="w-20 h-20 rounded-2xl shrink-0 border-2 border-transparent hover:border-indigo-500 transition-all overflow-hidden"
                       style={{ background: g }}
                     />

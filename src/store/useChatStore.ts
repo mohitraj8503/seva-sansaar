@@ -51,6 +51,9 @@ interface ChatStore {
   searchQuery: string;
   searchResults: string[];
   searchIndex: number;
+  isOnline: boolean;
+  drafts: Record<string, string>;
+  darkMode: boolean;
 
   // --- ACTIONS ---
   setView: (view: ChatView) => void;
@@ -106,6 +109,9 @@ interface ChatStore {
   setSearchQuery: (query: string) => void;
   setSearchResults: (results: string[]) => void;
   setSearchIndex: (index: number) => void;
+  setIsOnline: (online: boolean) => void;
+  setDraft: (userId: string, text: string) => void;
+  setDarkMode: (dark: boolean) => void;
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -155,6 +161,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   searchQuery: '',
   searchResults: [],
   searchIndex: 0,
+  isOnline: true,
+  drafts: {},
+  darkMode: true,
 
   // --- ACTIONS ---
   setView: (view) => set({ view }),
@@ -165,11 +174,18 @@ export const useChatStore = create<ChatStore>((set) => ({
   setActivePartner: (activePartner) => set({ activePartner }),
   setSharedSecret: (sharedSecret) => set({ sharedSecret }),
   
-  setMessages: (messages) => set((state) => ({ 
-    messages: typeof messages === 'function' ? messages(state.messages) : messages 
-  })),
+  setMessages: (messages) => set((state) => {
+    const newMsgs = typeof messages === 'function' ? messages(state.messages) : messages;
+    return { 
+      messages: [...newMsgs].sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      ) 
+    };
+  }),
   addMessage: (message) => set((state) => ({ 
-    messages: [...state.messages, message] 
+    messages: [...state.messages, message].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ) 
   })),
   updateMessage: (id, updates) => set((state) => ({
     messages: state.messages.map(m => m.id === id ? { ...m, ...updates } : m)
@@ -251,4 +267,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setSearchResults: (searchResults) => set({ searchResults }),
   setSearchIndex: (searchIndex) => set({ searchIndex }),
+  setIsOnline: (isOnline) => set({ isOnline }),
+  setDraft: (userId, text) => set((state) => ({
+    drafts: { ...state.drafts, [userId]: text }
+  })),
+  setDarkMode: (darkMode) => set({ darkMode }),
 }));

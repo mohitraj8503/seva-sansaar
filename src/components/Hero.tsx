@@ -60,7 +60,7 @@ export default function Hero() {
 
   return (
     <section
-      className="relative isolate min-h-[100svh] min-h-[100vh] w-full overflow-hidden bg-[#0a1428]"
+      className="relative isolate min-h-[100svh] min-h-[100dvh] w-full overflow-hidden bg-[#0a1428]"
       aria-labelledby="hero-heading"
     >
       <div id="seva-hero-top-sentinel" className="pointer-events-none absolute left-0 right-0 top-0 z-[5] h-1" aria-hidden />
@@ -110,7 +110,7 @@ export default function Hero() {
 
       <div className="absolute inset-0 z-[2] bg-[rgba(10,20,50,0.62)]" aria-hidden />
 
-      <div className="relative z-10 flex min-h-[100svh] min-h-[100vh] flex-col justify-center pt-[124px] pb-40 sm:pb-44">
+      <div className="relative z-10 flex min-h-[100svh] min-h-[100dvh] flex-col justify-center pt-[124px] pb-40 sm:pb-44">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <div

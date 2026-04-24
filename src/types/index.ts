@@ -10,6 +10,7 @@ export interface Profile {
   accent_color?: string;
   show_last_seen?: boolean;
   show_online_status?: boolean;
+  public_key?: string | null;
 }
 
 export interface Message {

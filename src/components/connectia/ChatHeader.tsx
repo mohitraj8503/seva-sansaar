@@ -51,7 +51,7 @@ export const ChatHeader = ({
 }: ChatHeaderProps) => {
   return (
     <div className="flex flex-col w-full">
-      <header className="h-[90px] px-4 md:px-8 bg-white/80 backdrop-blur-2xl border-b border-gray-100/50 flex items-center justify-between sticky top-0 z-[70] safe-top">
+      <header className="px-4 md:px-8 bg-white/80 backdrop-blur-2xl border-b border-gray-100/50 flex items-center justify-between sticky top-0 z-[70] pt-safe pb-4">
         <div className="flex items-center gap-5">
            <div 
              onClick={() => setView('list')} 

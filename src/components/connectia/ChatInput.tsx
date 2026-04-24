@@ -42,6 +42,7 @@ export const ChatInput = ({
          {replyTo && (
            <motion.div 
              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+             transition={{ duration: 0.15 }}
              className="mb-4 p-4 bg-gray-50 rounded-3xl flex items-center justify-between gap-4 border border-gray-100"
            >
              <div className="flex-1 min-w-0">
@@ -54,6 +55,7 @@ export const ChatInput = ({
          {editingMessage && (
            <motion.div 
              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+             transition={{ duration: 0.15 }}
              className="mb-4 p-4 bg-indigo-50 rounded-3xl flex items-center justify-between gap-4 border border-indigo-100"
            >
              <div className="flex-1 min-w-0">
@@ -67,99 +69,110 @@ export const ChatInput = ({
 
        <div className="flex items-center gap-3 md:gap-4 relative">
          <div className="relative">
-           <button 
-             onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-             className={clsx(
-               "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
-               showAttachmentMenu ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:text-black"
-             )}
-           >
-             <Paperclip size={24} />
-           </button>
-           
-           <AnimatePresence>
-             {showAttachmentMenu && (
-               <motion.div 
-                 initial={{ opacity: 0, scale: 0.9, y: -20 }} animate={{ opacity: 1, scale: 1, y: -80 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                 className="absolute bottom-0 left-0 flex flex-col gap-2 z-50"
-               >
-                 {[
-                   { icon: <ImageIcon size={20} />, label: 'Gallery', type: 'image' },
-                   { icon: <Video size={20} />, label: 'Video', type: 'video' },
-                   { icon: <FileText size={20} />, label: 'Document', type: 'file' }
-                 ].map((item, idx) => (
-                   <button 
-                     key={idx}
-                     onClick={() => attachmentRef.current?.click()}
-                     className="w-12 h-12 md:w-14 md:h-14 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-500 shadow-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"
-                   >
-                     {item.icon}
-                   </button>
-                 ))}
-                 <input ref={attachmentRef} type="file" className="hidden" multiple onChange={(e) => onFileSelect(e, 'file')} />
-               </motion.div>
-             )}
-           </AnimatePresence>
+            <motion.button 
+              whileTap={{ scale: 0.9 }}
+              transition={{ duration: 0.1 }}
+              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              className={clsx(
+                "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
+                showAttachmentMenu ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:text-black"
+              )}
+            >
+              <Paperclip size={24} />
+            </motion.button>
+            
+            <AnimatePresence>
+              {showAttachmentMenu && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: -20 }} animate={{ opacity: 1, scale: 1, y: -80 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-0 left-0 flex flex-col gap-2 z-50"
+                >
+                  {[
+                    { icon: <ImageIcon size={20} />, label: 'Gallery', type: 'image' },
+                    { icon: <Video size={20} />, label: 'Video', type: 'video' },
+                    { icon: <FileText size={20} />, label: 'Document', type: 'file' }
+                  ].map((item, idx) => (
+                    <motion.button 
+                      key={idx}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => attachmentRef.current?.click()}
+                      className="w-12 h-12 md:w-14 md:h-14 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-500 shadow-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                    >
+                      {item.icon}
+                    </motion.button>
+                  ))}
+                  <input ref={attachmentRef} type="file" className="hidden" multiple onChange={(e) => onFileSelect(e, 'file')} />
+                </motion.div>
+              )}
+            </AnimatePresence>
          </div>
 
          <div className="flex-1 bg-gray-100/80 rounded-[2.5rem] px-6 py-3 md:py-4 flex items-center gap-3 relative transition-all focus-within:bg-white focus-within:shadow-2xl focus-within:shadow-indigo-100/50 border border-transparent focus-within:border-indigo-100">
-           <button 
-            onClick={() => setShowEmojiPanel(!showEmojiPanel)}
-            className="text-gray-400 hover:text-amber-500 transition-colors"
-           >
-             <SmileIcon size={24} />
-           </button>
-           <textarea 
-             placeholder="Type a message..."
-             className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium text-black placeholder:text-gray-400 resize-none max-h-[120px] scrollbar-hide py-1"
-             rows={1}
-             value={inputText}
-             onChange={(e) => { 
-               setInputText(e.target.value); 
-               handleTyping(e.target.value.length > 0 ? 'typing' : null);
-             }}
-             onKeyDown={(e) => {
-               if (e.key === 'Enter' && !e.shiftKey) {
-                 e.preventDefault();
-                 sendMessage(inputText);
-               }
-             }}
-           />
+            <button 
+             onClick={() => setShowEmojiPanel(!showEmojiPanel)}
+             className="text-gray-400 hover:text-amber-500 transition-colors"
+            >
+              <SmileIcon size={24} />
+            </button>
+            <textarea 
+              placeholder="Type a message..."
+              className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium text-black placeholder:text-gray-400 resize-none max-h-[120px] scrollbar-hide py-1"
+              rows={1}
+              value={inputText}
+              onChange={(e) => { 
+                setInputText(e.target.value); 
+                handleTyping(e.target.value.length > 0 ? 'typing' : null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(inputText);
+                }
+              }}
+            />
          </div>
 
          <div className="flex items-center gap-2">
-           {inputText.trim() || isRecording ? (
-             <motion.button 
-               initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-               onClick={() => {
-                 if (isRecording) stopRecording();
-                 else sendMessage(inputText);
-               }}
-               className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 active:scale-95 transition-all"
-             >
-               <Send size={24} />
-             </motion.button>
-           ) : (
-             <motion.button 
-               initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-               onMouseDown={startRecording}
-               onMouseUp={stopRecording}
-               onTouchStart={startRecording}
-               onTouchEnd={stopRecording}
-               className={clsx(
-                 "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
-                 isRecording ? "bg-rose-500 text-white animate-pulse scale-125 shadow-2xl shadow-rose-200" : "bg-gray-100 text-gray-400 hover:text-black"
-               )}
-             >
-               <Mic size={24} />
-             </motion.button>
-           )}
+            {inputText.trim() || isRecording ? (
+              <motion.button 
+                initial={{ scale: 0.8, opacity: 0 }} 
+                animate={{ scale: 1, opacity: 1 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => {
+                  if (isRecording) stopRecording();
+                  else sendMessage(inputText);
+                }}
+                className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 transition-all"
+              >
+                <Send size={24} />
+              </motion.button>
+            ) : (
+              <motion.button 
+                initial={{ scale: 0.8, opacity: 0 }} 
+                animate={{ scale: 1, opacity: 1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ duration: 0.15 }}
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={clsx(
+                  "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
+                  isRecording ? "bg-rose-500 text-white animate-pulse scale-125 shadow-2xl shadow-rose-200" : "bg-gray-100 text-gray-400 hover:text-black"
+                )}
+              >
+                <Mic size={24} />
+              </motion.button>
+            )}
          </div>
 
          <AnimatePresence>
             {isRecording && (
               <motion.div 
                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
                 className="absolute right-20 bg-rose-500 text-white px-4 py-2 rounded-full text-xs font-black tracking-widest flex items-center gap-2 shadow-xl shadow-rose-200"
               >
                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />

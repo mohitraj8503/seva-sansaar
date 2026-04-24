@@ -4,6 +4,7 @@ import { Message, Call, Profile } from '@/types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { ConnectiaCrypto } from '@/utils/crypto';
 import { useChatStore } from '@/store/useChatStore';
+import { CryptoWorkerManager } from '@/utils/connectia/workerManager';
 
 const supabase = createClient();
 
@@ -44,8 +45,7 @@ export const useChatRealtime = (scrollToBottom: () => void, showScrollBottom: bo
 
         if (activePartner && nm.sender_id === activePartner.id) { 
           if (nm.is_encrypted && sharedSecret) {
-            const text = await ConnectiaCrypto.decrypt(nm.ciphertext!, nm.nonce!, sharedSecret);
-            nm = { ...nm, text: text || '[Decryption Failed]' };
+            nm = await CryptoWorkerManager.decryptSingle(nm, sharedSecret);
           }
           setMessages(prev => prev.some(m => m.id === nm.id) ? prev : [...prev, nm]); 
           supabase.from('messages').update({ status: 'delivered' }).eq('id', nm.id).then(); 

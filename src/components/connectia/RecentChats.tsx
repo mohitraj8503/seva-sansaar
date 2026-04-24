@@ -36,7 +36,7 @@ export const RecentChats = ({
 }: RecentChatsProps) => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
-      <header className="p-8 pt-12 safe-top flex flex-col gap-8 shrink-0 bg-black">
+      <header className="p-8 pt-safe pb-8 flex flex-col gap-8 shrink-0 bg-black">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
             <p className="text-amber-200/60 text-xs font-medium mb-1">

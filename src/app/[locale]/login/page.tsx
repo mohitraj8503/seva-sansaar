@@ -105,7 +105,7 @@ export default function LoginPage() {
             <div className="relative w-48 h-16 mb-6">
               <Image src="/logo-horizontal.png" alt="Seva Sansaar" fill className="object-contain" priority />
             </div>
-            <h1 className="text-4xl font-black text-white tracking-tight">सेवा संसार</h1>
+            <h1 className="text-4xl font-black text-white tracking-tight">नमस्ते</h1>
             <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.25em] text-white/30">Seva Sansaar Portal</p>
           </div>
 
