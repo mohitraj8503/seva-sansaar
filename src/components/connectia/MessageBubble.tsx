@@ -51,9 +51,9 @@ export const MessageBubble = memo(({
   return (
     <div 
       className={clsx(
-        "flex flex-col mb-4 px-4 md:px-8 max-w-full hover:bg-black/5 transition-colors group/bubble",
+        "flex flex-col mb-4 px-4 md:px-8 max-w-full transition-colors group/bubble",
         isMe ? "items-end" : "items-start",
-        isSearchResult && "bg-indigo-50/50 rounded-2xl py-2"
+        isSearchResult && "bg-white/5 rounded-2xl py-2"
       )}
       {...longPress}
       onContextMenu={(e) => {
@@ -61,42 +61,36 @@ export const MessageBubble = memo(({
         setShowOptions(true);
       }}
     >
-      <div className={clsx("flex items-end gap-2 max-w-[85%] md:max-w-[70%] group", isMe ? "flex-row-reverse" : "flex-row")}>
+      <div className={clsx("flex items-end gap-2 max-w-[75%] group", isMe ? "flex-row-reverse" : "flex-row")}>
         <div className="relative">
           <motion.div 
-            layoutId={message.id}
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ 
-              type: 'spring', 
-              damping: 30, 
-              stiffness: 500,
-              opacity: { duration: 0.1 }
-            }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             className={clsx(
-              "relative rounded-[2rem] shadow-sm transition-all overflow-hidden message-animate",
-              isMe ? "bg-indigo-600 text-white rounded-tr-lg" : "bg-white text-black border border-gray-100 rounded-tl-lg",
-              message.type === 'image' ? "p-1" : "px-5 py-3",
-              message.status === 'failed' && "border-rose-500 opacity-80"
+              "relative rounded-2xl shadow-sm transition-all overflow-hidden",
+              isMe 
+                ? "bg-[var(--bubble-sent)] text-white rounded-tr-sm" 
+                : "bg-[var(--bubble-received)] text-white rounded-tl-sm",
+              message.type === 'image' ? "p-1" : "px-4 py-2",
+              message.status === 'failed' && "border border-rose-500/50"
             )}
           >
             {/* REPLY PREVIEW */}
             {replyToMessage && (
-              <div className={clsx("mb-2 p-3 rounded-2xl text-[11px] border-l-4", isMe ? "bg-white/10 border-white/30 text-white/80" : "bg-gray-50 border-indigo-500 text-gray-500")}>
-                <p className="font-black mb-1">Reply to {replyToMessage.sender_id === message.sender_id ? 'self' : 'Partner'}</p>
+              <div className={clsx("mb-2 p-2 rounded-xl text-[12px] border-l-4", isMe ? "bg-white/10 border-white/30 text-white/90" : "bg-white/5 border-indigo-400 text-white/80")}>
+                <p className="font-bold mb-0.5 text-[10px] uppercase tracking-wider">Reply to {replyToMessage.sender_id === message.sender_id ? 'self' : 'Partner'}</p>
                 <p className="line-clamp-1">{replyToMessage.text}</p>
               </div>
             )}
 
             {/* MESSAGE CONTENT */}
             {message.is_deleted ? (
-               <p className="italic text-[13px] opacity-60">This message was deleted</p>
+               <p className="italic text-[14px] opacity-40">This message was deleted</p>
             ) : (
               <>
                 {message.type === 'text' && (
                   <div className="space-y-2">
-                    <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{message.text}</p>
+                    <p className="text-[15px] leading-snug break-words whitespace-pre-wrap">{message.text}</p>
                     {url && <LinkPreview url={url} />}
                   </div>
                 )}
@@ -110,19 +104,19 @@ export const MessageBubble = memo(({
                 {message.type === 'audio' && <CustomAudioPlayer src={message.file_url!} />}
 
                 {message.type === 'file' && (
-                  <div className={clsx("flex items-center gap-4 p-3 rounded-2xl", isMe ? "bg-white/10" : "bg-gray-50")}>
-                    <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center text-white"><FileText size={24} /></div>
+                  <div className={clsx("flex items-center gap-3 p-2 rounded-xl", isMe ? "bg-white/10" : "bg-white/5")}>
+                    <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white"><FileText size={20} /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold truncate">{message.text}</p>
                       <p className="text-[10px] opacity-60">Document</p>
                     </div>
-                    <a href={message.file_url!} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/10"><Download size={20} /></a>
+                    <a href={message.file_url!} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors text-white/60"><Download size={18} /></a>
                   </div>
                 )}
 
                 {message.type === 'call' && (
                    <div className="flex items-center gap-3">
-                      <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center", isMe ? "bg-white/20" : "bg-indigo-50 text-indigo-500")}>
+                      <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center", isMe ? "bg-white/20" : "bg-indigo-500/20 text-indigo-400")}>
                          {message.text.includes('Video') ? <Video size={20} /> : <Phone size={20} />}
                       </div>
                       <div className="flex flex-col">
@@ -135,9 +129,9 @@ export const MessageBubble = memo(({
             )}
 
             {/* STATUS & TIME */}
-            <div className={clsx("flex items-center gap-1.5 mt-1.5 justify-end", isMe ? "text-white/60" : "text-gray-400")}>
+            <div className={clsx("flex items-center gap-1 mt-1 justify-end opacity-60")}>
               <span className="text-[10px] font-medium">{formatMsgTime(message.created_at)}</span>
-              {message.edited_at && <span className="text-[9px] font-black uppercase">Edited</span>}
+              {message.edited_at && <span className="text-[9px] font-bold uppercase">Edited</span>}
               {isMe && <MessageStatusTicks status={message.status} />}
               {isStarred && <Star size={10} fill="currentColor" />}
             </div>
@@ -146,10 +140,10 @@ export const MessageBubble = memo(({
             {message.status === 'failed' && isMe && (
               <button 
                 onClick={() => onRetry(message)}
-                className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-500 text-white px-3 py-1.5 rounded-full hover:bg-rose-600 transition-colors shadow-lg"
+                className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-500 text-white px-3 py-1.5 rounded-full hover:bg-rose-600 transition-colors shadow-lg w-full justify-center"
               >
                 <RefreshCw size={10} />
-                Retry Sending
+                Retry
               </button>
             )}
           </motion.div>

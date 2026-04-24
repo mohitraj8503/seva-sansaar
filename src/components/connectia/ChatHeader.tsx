@@ -54,17 +54,20 @@ export const ChatHeader = ({
     <div className="flex flex-col w-full">
       <header className={clsx(
         "px-4 md:px-8 backdrop-blur-2xl border-b flex items-center justify-between sticky top-0 z-[70] pt-safe pb-4 transition-colors duration-300",
-        darkMode ? "bg-black/80 border-white/10" : "bg-white/80 border-gray-100/50"
+        darkMode ? "bg-[var(--bg-primary)] border-white/5" : "bg-white/80 border-gray-100/50"
       )}>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4">
            <div 
-             onClick={() => setView('list')} 
-             className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-black active:scale-90 transition-all md:hidden"
+             onClick={() => {
+               navigator.vibrate?.(10);
+               setView('list');
+             }} 
+             className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-[var(--text-primary)] active:scale-90 transition-all md:hidden"
            >
              <ChevronLeft size={24} />
            </div>
-           <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full overflow-hidden border border-gray-100 relative shadow-sm">
+           <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 relative shadow-sm">
                  <Image 
                    src={activePartner?.avatar_url || "/default-avatar.png"} 
                    alt={activePartner?.name || ""} 
@@ -73,43 +76,46 @@ export const ChatHeader = ({
                  />
               </div>
               <div className="flex flex-col">
-                 <h3 className={clsx("font-black text-lg tracking-tight leading-tight", darkMode ? "text-white" : "text-black")}>
+                 <h3 className={clsx("font-bold text-base tracking-tight leading-tight", darkMode ? "text-white" : "text-black")}>
                    {activePartner?.name}
                  </h3>
                  <p className={clsx(
-                   "text-[10px] font-bold uppercase tracking-[0.2em]", 
-                   onlineUsers.includes(activePartner?.id || '') ? "text-green-500" : "text-gray-300"
+                   "text-[10px] font-bold uppercase tracking-wider", 
+                   onlineUsers.includes(activePartner?.id || '') ? "text-green-500" : "text-gray-400"
                  )}>
                    {onlineUsers.includes(activePartner?.id || '') ? 'Online' : 'Offline'}
                  </p>
               </div>
            </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button 
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-gray-400 hover:text-black hover:bg-gray-50 transition-all"
+            className="w-12 h-12 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all"
             onClick={() => setIsSearchOpen(!isSearchOpen)}
           >
-             <Search size={22} />
+             <Search size={20} />
           </button>
           <button 
             onClick={() => activePartner && setActiveCall({ type: 'outgoing', target: activePartner })}
-            className="w-12 h-12 flex items-center justify-center rounded-xl text-gray-400 hover:text-black hover:bg-gray-50 transition-all"
+            className="w-12 h-12 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
-            <Phone size={22} />
+            <Phone size={20} />
           </button>
-          <button className="w-12 h-12 flex items-center justify-center rounded-xl text-gray-400 hover:text-black hover:bg-gray-50 transition-all">
-             <Video size={22} />
+          <button className="w-12 h-12 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+             <Video size={20} />
           </button>
           <button 
-            onClick={() => setShowMenu(!showMenu)} 
+            onClick={() => {
+              navigator.vibrate?.(10);
+              setShowMenu(!showMenu);
+            }} 
             className={clsx(
-              "w-12 h-12 flex items-center justify-center rounded-xl transition-all",
-              darkMode ? "text-white/60 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-black hover:bg-gray-50"
+              "w-12 h-12 flex items-center justify-center rounded-full transition-all",
+              darkMode ? "text-white/60 hover:text-white hover:bg-white/5" : "text-gray-400 hover:text-black hover:bg-gray-50"
             )}
             aria-label="Menu"
           >
-            <MoreVertical size={22} />
+            <MoreVertical size={20} />
           </button>
         </div>
       </header>

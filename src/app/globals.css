@@ -11,6 +11,16 @@
     --navy: #1a2d5c;
     --saffron: #ff9933;
     --india-green: #138808;
+
+    /* Connectia Design System Tokens */
+    --bg-primary: #0b0b0b;
+    --bg-secondary: #121212;
+    --bg-glass: rgba(255,255,255,0.05);
+    --text-primary: #ffffff;
+    --text-secondary: #9ca3af;
+    --accent: #6366f1;
+    --bubble-sent: #6366f1;
+    --bubble-received: #1f2937;
   }
 
   * {

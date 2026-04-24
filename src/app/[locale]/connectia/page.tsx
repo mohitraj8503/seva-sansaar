@@ -274,9 +274,33 @@ export default function ConnectiaPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-black gap-6">
-        <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="text-white/40 font-black uppercase tracking-[0.3em] text-[10px]">Loading Workspace</p>
+      <div className="h-[100dvh] w-full flex bg-[var(--bg-primary)] overflow-hidden">
+        {/* Sidebar Skeleton */}
+        <aside className="hidden md:flex flex-col w-[350px] border-r border-white/5 p-6 gap-6">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <div className="h-2 w-16 bg-white/5 rounded-full animate-pulse" />
+              <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse" />
+            </div>
+            <div className="w-10 h-10 bg-white/5 rounded-full animate-pulse" />
+          </div>
+          <div className="space-y-4">
+             {Array(6).fill(0).map((_, i) => (
+               <div key={i} className="flex items-center gap-4">
+                 <div className="w-14 h-14 bg-white/5 rounded-full animate-pulse" />
+                 <div className="flex-1 space-y-2">
+                   <div className="h-3 bg-white/10 rounded-full w-1/3 animate-pulse" />
+                   <div className="h-3 bg-white/5 rounded-full w-2/3 animate-pulse" />
+                 </div>
+               </div>
+             ))}
+          </div>
+        </aside>
+        {/* Main Skeleton */}
+        <main className="flex-1 flex flex-col bg-[var(--bg-secondary)] items-center justify-center gap-4 p-8">
+          <div className="w-20 h-20 bg-white/5 rounded-3xl animate-pulse" />
+          <div className="h-4 w-48 bg-white/5 rounded-full animate-pulse" />
+        </main>
       </div>
     );
   }
@@ -284,8 +308,8 @@ export default function ConnectiaPage() {
   return (
     <ChatErrorBoundary>
       <div className={clsx(
-        "h-[100dvh] w-full flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-900 overscroll-contain",
-        store.darkMode ? "bg-black text-white" : "bg-[#f8f9fa] text-black"
+        "h-[100dvh] w-full flex overflow-hidden selection:bg-indigo-500/20 selection:text-indigo-200 overscroll-none",
+        "bg-[var(--bg-primary)] text-[var(--text-primary)]"
       )}>
         <AnimatePresence>
           {store.activeCall && store.currentUser && (
@@ -298,9 +322,10 @@ export default function ConnectiaPage() {
           )}
         </AnimatePresence>
 
+        {/* Desktop Sidebar */}
         <aside 
-          style={{ width: store.isSidebarCollapsed ? 64 : sidebarWidth }}
-          className="hidden md:flex flex-col bg-white border-r border-gray-100/50 h-full relative z-20 transition-all duration-500 ease-[0.23, 1, 0.32, 1]"
+          style={{ width: store.isSidebarCollapsed ? 80 : sidebarWidth }}
+          className="hidden md:flex flex-col bg-[var(--bg-primary)] border-r border-white/5 h-full relative z-20 transition-all duration-300"
         >
           <RecentChats 
             chatProfiles={chatProfiles}
@@ -312,72 +337,75 @@ export default function ConnectiaPage() {
             lastMessages={store.lastMessages}
             unreadCounts={store.unreadCounts}
             onlineUsers={store.onlineUsers}
-            currentUser={store.currentUser}
             isLoading={isLoading}
           />
         </aside>
 
-        <main 
-          className="flex-1 relative flex flex-col overflow-hidden bg-black w-full"
-          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-              handleFileSelect({ target: { files: e.dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>);
-            }
-          }}
-        >
+        {/* Main Content Area */}
+        <main className="flex-1 relative flex flex-col overflow-hidden bg-[var(--bg-primary)] w-full">
           {!store.isOnline && (
             <div className="bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest py-1 flex items-center justify-center gap-2 animate-pulse z-[100]">
-              Waiting for network...
+              Offline • Reconnecting...
             </div>
           )}
-          {isLoading && (
-            <div className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest py-1 flex items-center justify-center gap-2 animate-pulse z-[100]">
-              Connecting...
-            </div>
-          )}
+
           <AnimatePresence mode="wait" initial={false}>
             {store.view === 'welcome' && (
-              <motion.div key="w" className="flex flex-1 flex-col items-center justify-center bg-[#f8f9fa] text-center p-8">
-                  <div className="w-32 h-32 bg-white rounded-[3rem] shadow-xl flex items-center justify-center mb-8">
-                    <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500">
-                      <MessageCircle size={32} />
-                    </div>
+              <motion.div 
+                key="welcome" 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="flex flex-1 flex-col items-center justify-center text-center p-8 bg-[var(--bg-secondary)]"
+              >
+                  <div className="w-24 h-24 bg-white/5 rounded-3xl flex items-center justify-center text-indigo-400 mb-8 shadow-2xl">
+                    <MessageCircle size={40} />
                   </div>
-                  <h2 className="text-3xl font-black text-black mb-4">Start your private space 💬</h2>
-                  <p className="text-gray-400 max-w-sm font-medium leading-relaxed">Only you two, no one else. Every word, every photo, and every moment is shared in total privacy.</p>
+                  <h2 className="text-2xl font-black mb-3">Connectia Private</h2>
+                  <p className="text-white/40 max-w-xs font-medium leading-relaxed text-sm">
+                    Select a partner to start your secure, private conversation.
+                  </p>
               </motion.div>
             )}
 
             {store.view === 'list' && (
-              <RecentChats 
-                chatProfiles={chatProfiles}
-                activePartner={store.activePartner}
-                setActivePartner={selectPartner}
-                view={store.view}
-                setView={store.setView}
-                setOpenTabs={() => {}}
-                lastMessages={store.lastMessages}
-                unreadCounts={store.unreadCounts}
-                onlineUsers={store.onlineUsers}
-                currentUser={store.currentUser}
-                isLoading={isLoading}
-              />
+              <motion.div 
+                key="list" 
+                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                className="flex-1 md:hidden"
+              >
+                <RecentChats 
+                  chatProfiles={chatProfiles}
+                  activePartner={store.activePartner}
+                  setActivePartner={selectPartner}
+                  view={store.view}
+                  setView={store.setView}
+                  setOpenTabs={() => {}}
+                  lastMessages={store.lastMessages}
+                  unreadCounts={store.unreadCounts}
+                  onlineUsers={store.onlineUsers}
+                  isLoading={isLoading}
+                />
+              </motion.div>
             )}
 
             {store.view === 'chat' && store.activePartner && (
-              <motion.div key="chat" className="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
+              <motion.div 
+                key="chat" 
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+                className="flex-1 flex flex-col h-full bg-[var(--bg-secondary)] relative overflow-hidden"
+              >
+                {/* Background Layer */}
                 <div 
-                  className="absolute inset-0 z-0 opacity-40 pointer-events-none" 
-                  style={{ background: wallpaperUrl ? `url(${wallpaperUrl}) center/cover no-repeat` : wallpaper || 'white' }} 
+                  className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+                  style={{ background: wallpaperUrl ? `url(${wallpaperUrl}) center/cover no-repeat` : wallpaper || 'transparent' }} 
                 />
                 
                 <ChatHeader 
                   activePartner={store.activePartner}
                   onlineUsers={store.onlineUsers}
-                  setView={store.setView}
+                  setView={(v) => {
+                    navigator.vibrate?.(5);
+                    store.setView(v);
+                  }}
                   setActiveCall={store.setActiveCall}
                   showMenu={store.showMenu}
                   setShowMenu={store.setShowMenu}
@@ -401,7 +429,7 @@ export default function ConnectiaPage() {
                   setShowClearConfirm={store.setShowClearConfirm}
                   handleExportChat={handleExportChat}
                   currentUser={store.currentUser}
-                  darkMode={darkMode}
+                  darkMode={true}
                 />
 
                 <div className="flex-1 relative z-10">
@@ -438,47 +466,45 @@ export default function ConnectiaPage() {
                   currentUser={store.currentUser}
                   messages={store.messages}
                 />
-
-                {/* Desktop Info Panel */}
-                <aside className="hidden xl:flex absolute top-0 right-0 w-[320px] flex-col bg-white border-l border-gray-100/50 h-full z-20">
-                   <div className="p-8">
-                     <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">Contact Information</h3>
-                     <div className="flex flex-col items-center text-center">
-                       <div className="w-24 h-24 bg-indigo-50 rounded-[2.5rem] flex items-center justify-center text-indigo-600 mb-4 text-3xl font-black">
-                         {store.activePartner.name[0]}
-                       </div>
-                       <h4 className="text-2xl font-black text-black mb-1">{store.activePartner.name}</h4>
-                       <p className="text-sm text-gray-400 font-medium">Connectia Private Space</p>
-                     </div>
-                   </div>
-                </aside>
               </motion.div>
             )}
 
             {store.view === 'calls' && (
-              <CallHistory 
-                recentCalls={recentCalls}
-                setView={store.setView}
-                setActivePartner={selectPartner}
-                setActiveCall={store.setActiveCall}
-                view={store.view}
-              />
+              <motion.div 
+                key="calls" 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                className="flex-1 h-full"
+              >
+                <CallHistory 
+                  recentCalls={recentCalls}
+                  setView={store.setView}
+                  setActivePartner={selectPartner}
+                  setActiveCall={store.setActiveCall}
+                  view={store.view}
+                />
+              </motion.div>
             )}
 
             {store.view === 'details' && (
-              <UserProfileView 
-                currentUser={store.currentUser}
-                setCurrentUser={store.setCurrentUser}
-                setView={store.setView}
-                setShowLogoutConfirm={store.setShowLogoutConfirm}
-                setShowSetup={store.setShowSetup}
-              />
+              <motion.div 
+                key="details" 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+                className="flex-1 h-full"
+              >
+                <UserProfileView 
+                  currentUser={store.currentUser}
+                  setCurrentUser={store.setCurrentUser}
+                  setView={store.setView}
+                  setShowLogoutConfirm={store.setShowLogoutConfirm}
+                  setShowSetup={store.setShowSetup}
+                />
+              </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Mobile Bottom Navigation */}
+          {/* Mobile Navigation Bar */}
           {store.view !== 'chat' && (
-            <div className="md:hidden h-20 bg-white/80 backdrop-blur-2xl border-t border-gray-100/50 flex items-center justify-around px-6 safe-bottom shrink-0 relative z-50">
+            <nav className="md:hidden h-20 bg-[var(--bg-primary)] border-t border-white/5 flex items-center justify-around px-6 safe-bottom shrink-0 relative z-50">
               {[
                 { id: 'list', icon: <MessageCircle size={22} />, label: 'Chats' },
                 { id: 'calls', icon: <Phone size={22} />, label: 'Calls' },
@@ -486,17 +512,21 @@ export default function ConnectiaPage() {
               ].map(item => (
                 <button 
                   key={item.id}
-                  onClick={() => store.setView(item.id as ChatView)}
+                  onClick={() => {
+                    navigator.vibrate?.(5);
+                    store.setView(item.id as ChatView);
+                  }}
                   className={clsx(
                     "flex flex-col items-center gap-1.5 transition-all active:scale-90",
-                    store.view === item.id ? "text-indigo-600" : "text-gray-400"
+                    store.view === item.id ? "text-indigo-400" : "text-white/20"
                   )}
+                  aria-label={`Switch to ${item.label}`}
                 >
                   {item.icon}
-                  <span className="text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
                 </button>
               ))}
-            </div>
+            </nav>
           )}
         </main>
 
@@ -509,7 +539,7 @@ export default function ConnectiaPage() {
           handleLogout={handleLogout}
           showClearConfirm={store.showClearConfirm}
           setShowClearConfirm={store.setShowClearConfirm}
-          handleClearChat={() => {}} // Should use handleClearChat from useChatMessages
+          handleClearChat={() => {}} 
           showWallpaperSheet={store.showWallpaperSheet}
           setShowWallpaperSheet={store.setShowWallpaperSheet}
           wallpaperUrl={wallpaperUrl}
@@ -552,3 +582,4 @@ export default function ConnectiaPage() {
     </ChatErrorBoundary>
   );
 }
+

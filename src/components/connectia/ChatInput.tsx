@@ -65,42 +65,62 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="p-4 md:p-8 bg-white/80 backdrop-blur-2xl border-t border-gray-100/50 safe-bottom">
+    <div className="p-4 bg-[var(--bg-primary)] border-t border-white/5 safe-bottom">
        <AnimatePresence>
          {replyTo && (
            <motion.div 
              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-             className="mb-4 p-4 bg-gray-50 rounded-3xl flex items-center justify-between gap-4 border border-gray-100"
+             className="mb-3 p-3 bg-white/5 rounded-2xl flex items-center justify-between gap-4 border border-white/5"
            >
              <div className="flex-1 min-w-0">
-               <p className="text-[10px] font-black uppercase text-indigo-500 mb-1">Replying to {replyTo.sender_id === currentUser?.id ? 'Yourself' : 'Partner'}</p>
-               <p className="text-sm text-gray-500 truncate">{replyTo.text}</p>
+               <p className="text-[10px] font-black uppercase text-indigo-400 mb-0.5">Replying to {replyTo.sender_id === currentUser?.id ? 'Yourself' : 'Partner'}</p>
+               <p className="text-sm text-white/60 truncate leading-snug">{replyTo.text}</p>
              </div>
-             <button onClick={() => setReplyTo(null)} className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center text-gray-400"><X size={18} /></button>
+             <button 
+               onClick={() => setReplyTo(null)} 
+               className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center text-white/40"
+               aria-label="Cancel reply"
+             >
+               <X size={18} />
+             </button>
            </motion.div>
          )}
        </AnimatePresence>
 
-       <div className="flex items-center gap-3 md:gap-4 relative">
+       <div className="flex items-end gap-3 relative">
          <div className="relative">
             <motion.button 
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              onClick={() => {
+                navigator.vibrate?.(5);
+                setShowAttachmentMenu(!showAttachmentMenu);
+              }}
               className={clsx(
-                "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
-                showAttachmentMenu ? "bg-black text-white" : "bg-gray-100 text-gray-400 hover:text-black"
+                "w-12 h-12 rounded-full flex items-center justify-center transition-all",
+                showAttachmentMenu ? "bg-white text-black" : "bg-white/5 text-white/40 hover:text-white"
               )}
+              aria-label="Attachments"
+              aria-expanded={showAttachmentMenu}
             >
-              <Paperclip size={24} />
+              <Paperclip size={22} />
             </motion.button>
             
             <AnimatePresence>
               {showAttachmentMenu && (
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: -20 }} animate={{ opacity: 1, scale: 1, y: -80 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} 
+                  animate={{ opacity: 1, scale: 1, y: -60 }} 
+                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
                   className="absolute bottom-0 left-0 flex flex-col gap-2 z-50"
                 >
-                  <button onClick={() => attachmentRef.current?.click()} className="w-12 h-12 md:w-14 md:h-14 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-500 shadow-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                  <button 
+                    onClick={() => {
+                      attachmentRef.current?.click();
+                      setShowAttachmentMenu(false);
+                    }} 
+                    className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-transform"
+                    aria-label="Attach file"
+                  >
                     <ImageIcon size={20} />
                   </button>
                   <input ref={attachmentRef} type="file" className="hidden" multiple onChange={(e) => onFileSelect(e, 'file')} />
@@ -109,14 +129,18 @@ export const ChatInput = ({
             </AnimatePresence>
          </div>
 
-         <div className="flex-1 bg-gray-100/80 rounded-[2.5rem] px-6 py-3 md:py-4 flex items-center gap-3 relative transition-all focus-within:bg-white focus-within:shadow-2xl focus-within:shadow-indigo-100/50 border border-transparent focus-within:border-indigo-100">
-            <button onClick={() => setShowEmojiPanel(!showEmojiPanel)} className="text-gray-400 hover:text-amber-500 transition-colors">
-              <SmileIcon size={24} />
+         <div className="flex-1 bg-white/5 rounded-[1.5rem] px-4 py-3 flex items-end gap-3 relative transition-all focus-within:bg-white/10 border border-transparent focus-within:border-white/10">
+            <button 
+              onClick={() => setShowEmojiPanel(!showEmojiPanel)} 
+              className="w-10 h-10 shrink-0 flex items-center justify-center text-white/40 hover:text-amber-400 transition-colors"
+              aria-label="Emoji picker"
+            >
+              <SmileIcon size={22} />
             </button>
             <textarea 
               ref={textareaRef}
               placeholder="Type a message..."
-              className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium text-black placeholder:text-gray-400 resize-none max-h-[120px] scrollbar-hide py-1 overscroll-contain"
+              className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium text-white placeholder:text-white/20 resize-none max-h-[120px] scrollbar-hide py-2 overscroll-contain"
               rows={1}
               value={inputText}
               onChange={(e) => { 
@@ -132,15 +156,19 @@ export const ChatInput = ({
             />
          </div>
 
-         <div className="flex items-center gap-2">
+         <div className="flex items-center">
             {inputText.trim() || isRecording ? (
               <motion.button 
                 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleSend}
-                className="w-12 h-12 md:w-14 md:h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 transition-all"
+                onClick={() => {
+                  navigator.vibrate?.(10);
+                  handleSend();
+                }}
+                className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 transition-all"
+                aria-label="Send message"
               >
-                <Send size={24} />
+                <Send size={20} />
               </motion.button>
             ) : (
               <motion.button 
@@ -149,11 +177,12 @@ export const ChatInput = ({
                 onTouchStart={startRecording}
                 onTouchEnd={stopRecording}
                 className={clsx(
-                  "w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all",
-                  isRecording ? "bg-rose-500 text-white animate-pulse scale-125 shadow-2xl shadow-rose-200" : "bg-gray-100 text-gray-400 hover:text-black"
+                  "w-12 h-12 rounded-full flex items-center justify-center transition-all",
+                  isRecording ? "bg-rose-500 text-white animate-pulse scale-125 shadow-2xl" : "bg-white/5 text-white/40 hover:text-white"
                 )}
+                aria-label="Voice message"
               >
-                <Mic size={24} />
+                <Mic size={22} />
               </motion.button>
             )}
          </div>
