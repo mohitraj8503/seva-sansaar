@@ -1,0 +1,1 @@
+1831:                     <div className={clsx("flex items-center gap-3 p-2 rounded-2xl border transition-all", isRecording ? "bg-indigo-600 text-white border-transparent" : inputText.trim() ? "border-indigo-200" : "bg-gray-50 border-gray-100 shadow-sm")}>

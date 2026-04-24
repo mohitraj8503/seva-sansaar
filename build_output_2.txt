@@ -1,0 +1,84 @@
+
+> seva-sansaar@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.15
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings in 8.3s
+
+./src/app/[locale]/connectia/page.tsx
+Attempted import error: 'VariableSizeList' is not exported from 'react-window' (imported as 'VariableSizeList').
+
+Import trace for requested module:
+./src/app/[locale]/connectia/page.tsx
+
+./src/app/[locale]/connectia/page.tsx
+Attempted import error: 'VariableSizeList' is not exported from 'react-window' (imported as 'VariableSizeList').
+
+Import trace for requested module:
+./src/app/[locale]/connectia/page.tsx
+
+   Linting and checking validity of types ...
+
+./src/app/[locale]/connectia/page.tsx
+59:12  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+171:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+179:7  Warning: 'AudioPlayer' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+259:102  Warning: 'onRetry' is defined but never used.  @typescript-eslint/no-unused-vars
+555:23  Warning: 'setOnlineUsers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+681:39  Warning: 'behavior' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+704:9  Warning: 'startRecording' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+790:25  Warning: 'uploadData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+913:9  Warning: 'scrollRef' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+914:9  Warning: 'scrollContainerRef' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+945:9  Warning: 'handleScroll' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1125:14  Warning: 'prev' is defined but never used.  @typescript-eslint/no-unused-vars
+1245:75  Warning: '_menuType' is defined but never used.  @typescript-eslint/no-unused-vars
+1465:13  Warning: 'isInput' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/[locale]/login/page.tsx
+3:10  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+5:23  Warning: 'Lock' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/CallInterface.tsx
+183:6  Warning: React Hook useCallback has a missing dependency: 'stopScreenShare'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/Navbar.tsx
+9:10  Warning: 'clsx' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/PINLock.tsx
+45:6  Warning: React Hook useEffect has a missing dependency: 'tryBiometric'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+58:6  Warning: React Hook useEffect has a missing dependency: 'handleNumber'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/PINSetup.tsx
+32:6  Warning: React Hook React.useEffect has missing dependencies: 'handleBackspace' and 'handleNumber'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/profile/ChatStats.tsx
+4:21  Warning: 'TrendingUp' is defined but never used.  @typescript-eslint/no-unused-vars
+40:6  Warning: React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/profile/PrivacySecurity.tsx
+4:30  Warning: 'LogOut' is defined but never used.  @typescript-eslint/no-unused-vars
+4:51  Warning: 'Check' is defined but never used.  @typescript-eslint/no-unused-vars
+9:41  Warning: 'onUpdate' is defined but never used.  @typescript-eslint/no-unused-vars
+12:10  Warning: 'showOnline' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+20:6  Warning: React Hook useEffect has missing dependencies: 'fetchSessions' and 'user.id'. Either include them or remove the dependency array. If 'setIsLockEnabled' needs the current value of 'user.id', you can also switch to useReducer instead of useState and read 'user.id' in the reducer.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/app/[locale]/connectia/page.tsx:21:10
+Type error: Module '"react-window"' has no exported member 'VariableSizeList'.
+
+[0m [90m 19 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/utils/supabase/client'[39m[33m;[39m
+ [90m 20 |[39m [36mimport[39m { [33mOfflineQueue[39m } [36mfrom[39m [32m'@/utils/localQueue'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 21 |[39m [36mimport[39m { [33mVariableSizeList[39m } [36mfrom[39m [32m'react-window'[39m[33m;[39m
+ [90m    |[39m          [31m[1m^[22m[39m
+ [90m 22 |[39m [36mconst[39m [33mList[39m [33m=[39m [33mVariableSizeList[39m[33m;[39m
+ [90m 23 |[39m [36mimport[39m { [33mAutoSizer[39m } [36mfrom[39m [32m'react-virtualized-auto-sizer'[39m[33m;[39m
+ [90m 24 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null

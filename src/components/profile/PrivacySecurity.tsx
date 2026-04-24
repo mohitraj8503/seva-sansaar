@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Lock, Eye, Monitor, LogOut, ShieldCheck, Check, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Lock, Eye, Monitor, ShieldCheck, Loader2, Globe } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { chatLock } from '@/lib/chatLock';
 import { Profile } from '@/types';
 
-export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: Profile, onUpdate: (data: Partial<Profile>) => void, onTriggerLockSetup: () => void }) => {
+export const PrivacySecurity = ({ user, _onUpdate, onTriggerLockSetup }: { user: Profile, _onUpdate: (data: Partial<Profile>) => void, onTriggerLockSetup: () => void }) => {
   const [isLockEnabled, setIsLockEnabled] = useState(false);
   const [showLastSeen, setShowLastSeen] = useState(user.show_last_seen !== false);
   const [showOnline, setShowOnline] = useState(user.show_online_status !== false);
@@ -14,14 +15,7 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
   const [isFetchingSessions, setIsFetchingSessions] = useState(true);
   const supabase = createClient();
 
-  useEffect(() => {
-    if (user?.id) setIsLockEnabled(chatLock.isLocked(user.id));
-    fetchSessions();
-  }, []);
-
-  const fetchSessions = async () => {
-    // Note: Standard Supabase client can't see all sessions of others without admin
-    // We'll show the current one and a placeholder for others if not accessible
+  const fetchSessions = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -33,14 +27,17 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
         }]);
       }
     } finally { setIsFetchingSessions(false); }
-  };
+  }, [supabase.auth]);
+
+  useEffect(() => {
+    if (user?.id) setIsLockEnabled(chatLock.isLocked(user.id));
+    fetchSessions();
+  }, [user.id, fetchSessions]);
 
   const toggleLock = () => {
     if (isLockEnabled) {
-      // Logic for disabling lock (should ask for PIN, but we'll simplify for now or use window.prompt)
       const pin = window.prompt("Enter current PIN to disable:");
       if (pin) {
-        // Normally you'd hash and compare here
         chatLock.disable(user.id);
         setIsLockEnabled(false);
       }
@@ -49,17 +46,13 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
     }
   };
 
-  const updatePreference = async (field: string, value: boolean) => {
-    if (!user?.id) {
-      console.error("UPDATE ERROR: User ID is missing");
-      return;
-    }
+  const updatePreference = async (field: 'show_last_seen' | 'show_online_status', value: boolean) => {
     if (field === 'show_last_seen') setShowLastSeen(value);
     if (field === 'show_online_status') setShowOnline(value);
-    const { error } = await supabase.from('profiles').update({ [field]: value }).eq('id', user.id);
-    if (error) {
-      console.log(`UPDATE ${field.toUpperCase()} ERROR:`, error);
-    }
+    
+    _onUpdate({ [field]: value });
+    
+    await supabase.from('profiles').update({ [field]: value }).eq('id', user.id);
   };
 
   return (
@@ -95,6 +88,17 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
           </button>
         </div>
 
+        {/* Online Status */}
+        <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <Globe size={18} className={showOnline ? "text-indigo-400" : "text-white/20"} />
+            <p className="text-sm font-bold text-white">Online Status</p>
+          </div>
+          <button onClick={() => updatePreference('show_online_status', !showOnline)} className={clsx("w-12 h-6 rounded-full relative transition-colors", showOnline ? "bg-indigo-500/20" : "bg-white/10")}>
+            <motion.div animate={{ x: showOnline ? 24 : 4 }} className="absolute top-1 w-4 h-4 bg-white rounded-full" />
+          </button>
+        </div>
+
         {/* Active Sessions */}
         <div className="pt-4">
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-1 mb-4">Active Sessions</p>
@@ -118,5 +122,4 @@ export const PrivacySecurity = ({ user, onUpdate, onTriggerLockSetup }: { user: 
   );
 };
 
-import { motion } from 'framer-motion';
 const clsx = (...classes: (string | boolean | undefined | null)[]) => classes.filter(Boolean).join(' ');

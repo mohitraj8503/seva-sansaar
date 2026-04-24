@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Delete } from 'lucide-react';
 import { chatLock } from '@/lib/chatLock';
@@ -18,23 +18,8 @@ export const PINSetup: React.FC<PINSetupProps> = ({ onComplete, userId }) => {
   const [isWrong, setIsWrong] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleNumber = (n: string) => {
-    if (step === 1) {
-      if (pin.length < 4) {
-        const next = pin + n;
-        setPin(next);
-        if (next.length === 4) setTimeout(() => setStep(2), 300);
-      }
-    } else if (step === 2) {
-      if (confirmPin.length < 4) {
-        const next = confirmPin + n;
-        setConfirmPin(next);
-        if (next.length === 4) handleVerify(next);
-      }
-    }
-  };
 
-  const handleVerify = async (finalConfirm: string) => {
+  const handleVerify = useCallback(async (finalConfirm: string) => {
     if (pin === finalConfirm) {
       setIsSuccess(true);
       await chatLock.setupPIN(userId, pin);
@@ -54,12 +39,41 @@ export const PINSetup: React.FC<PINSetupProps> = ({ onComplete, userId }) => {
         setConfirmPin("");
       }, 500);
     }
-  };
+  }, [onComplete, pin, userId]);
 
-  const handleBackspace = () => {
+  const handleNumber = useCallback((n: string) => {
+    if (step === 1) {
+      if (pin.length < 4) {
+        const next = pin + n;
+        setPin(next);
+        if (next.length === 4) setTimeout(() => setStep(2), 300);
+      }
+    } else if (step === 2) {
+      if (confirmPin.length < 4) {
+        const next = confirmPin + n;
+        setConfirmPin(next);
+        if (next.length === 4) handleVerify(next);
+      }
+    }
+  }, [confirmPin, handleVerify, pin, step]);
+
+  const handleBackspace = useCallback(() => {
     if (step === 1) setPin(p => p.slice(0, -1));
     else if (step === 2) setConfirmPin(p => p.slice(0, -1));
-  };
+  }, [step]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (step === 3) return;
+      if (e.key >= '0' && e.key <= '9') {
+        handleNumber(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, pin, confirmPin, handleNumber, handleBackspace]);
 
   return (
     <motion.div 

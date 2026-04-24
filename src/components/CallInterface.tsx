@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, User, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { PhoneOff, Mic, MicOff, Loader2, Video, VideoOff, Maximize2, Monitor } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
 import { Profile, Call } from '@/types';
+import { clsx } from 'clsx';
+import Image from 'next/image';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface CallInterfaceProps {
   currentUser: Profile;
@@ -19,23 +22,20 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
     type === 'outgoing' ? 'calling' : 'ringing'
   );
   const [isMuted, setIsMuted] = useState(false);
-  const [isSpeaker, setIsSpeaker] = useState(true);
+  const [isVideoOff, setIsVideoOff] = useState(false);
   const [timer, setTimer] = useState(0);
   const [callId, setCallId] = useState<string | null>(incomingCall?.id || null);
-  const [isLogCreated, setIsLogCreated] = useState(false);
+  const [isPiP, setIsPiP] = useState(false);
 
   const supabase = createClient();
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    initCall();
-    return () => {
-      endCall();
-    };
-  }, []);
+  // useEffect moved below for declaration order
 
   useEffect(() => {
     if (status === 'connected') {
@@ -47,36 +47,49 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
     }
   }, [status]);
 
-  const initCall = async () => {
+  const initCall = useCallback(async () => {
     try {
-      // 1. Get local stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
       localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      // 2. Setup PeerConnection
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
       });
       pcRef.current = pc;
 
-      // Add tracks
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // Handle remote tracks
       pc.ontrack = (event) => {
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = event.streams[0];
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+          setStatus('connected');
         }
-        setStatus('connected');
       };
 
-      // Handle ICE candidates
-      pc.onicecandidate = async (event) => {
-        if (event.candidate && callId) {
-          // In a real implementation, you'd send ICE candidates via a separate table or jsonb array
-          // For simplicity in this demo, we'll assume STUN handles it or use the offer/answer exchange
+      pc.onicecandidate = (event) => {
+        if (event.candidate && channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'ice-candidate',
+            payload: { candidate: event.candidate, to: targetUser.id }
+          });
         }
       };
+
+      // Set up signaling channel
+      const channel = supabase.channel(`call-signaling-${callId || 'new'}`);
+      channelRef.current = channel;
+
+      channel.on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+        if (payload.to === currentUser.id && pcRef.current) {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+        }
+      }).subscribe();
 
       if (type === 'outgoing') {
         const offer = await pc.createOffer();
@@ -86,190 +99,228 @@ export const CallInterface = ({ currentUser, targetUser, type, onClose, incoming
           caller_id: currentUser.id,
           receiver_id: targetUser.id,
           offer: offer,
-          status: 'ringing'
+          status: 'ringing',
+          type: 'video'
         }).select().single();
 
         if (error) throw error;
         setCallId(data.id);
 
         // Listen for answer
-        const channel = supabase.channel(`call-${data.id}`)
+        supabase.channel(`call-update-${data.id}`)
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: `id=eq.${data.id}` }, async (payload) => {
             const updatedCall = payload.new as Call;
             if (updatedCall.status === 'accepted' && updatedCall.answer) {
               await pc.setRemoteDescription(new RTCSessionDescription(updatedCall.answer));
+              setStatus('connected');
             } else if (updatedCall.status === 'rejected' || updatedCall.status === 'ended') {
               setStatus(updatedCall.status);
               setTimeout(onClose, 2000);
             }
-          })
-          .subscribe();
-      } else if (type === 'incoming' && incomingCall) {
+          }).subscribe();
+      } else if (incomingCall && incomingCall.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
-        await supabase.from('calls').update({
-          answer: answer,
-          status: 'accepted'
-        }).eq('id', incomingCall.id);
-
-        // Listen for end
-        const channel = supabase.channel(`call-${incomingCall.id}`)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: `id=eq.${incomingCall.id}` }, (payload) => {
-            if (payload.new.status === 'ended') {
-              setStatus('ended');
-              setTimeout(onClose, 2000);
-            }
-          })
-          .subscribe();
+        await supabase.from('calls').update({ answer, status: 'accepted' }).eq('id', incomingCall.id);
+        setStatus('connected');
       }
     } catch (err) {
       console.error('Call initialization failed:', err);
       onClose();
     }
+  }, [callId, currentUser.id, incomingCall, onClose, supabase, targetUser.id, type]);
+
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  const toggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      try {
+        const screenStream = await (navigator.mediaDevices as unknown as { getDisplayMedia: (constraints: { video: boolean }) => Promise<MediaStream> }).getDisplayMedia({ video: true });
+        screenStreamRef.current = screenStream;
+        const videoTrack = screenStream.getVideoTracks()[0];
+        
+        if (pcRef.current) {
+          const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) sender.replaceTrack(videoTrack);
+        }
+        
+        videoTrack.onended = () => { stopScreenShare(); };
+        setIsScreenSharing(true);
+      } catch (err) { console.error('Screen share failed:', err); }
+    } else {
+      stopScreenShare();
+    }
   };
 
-  const createCallLog = async (finalStatus: string, duration: number) => {
-    if (isLogCreated) return;
-    setIsLogCreated(true);
-    
-    let logStatus = 'ended';
-    if (finalStatus === 'missed') logStatus = 'missed';
-    if (finalStatus === 'rejected') logStatus = 'declined';
-    
-    const durationText = duration > 0 ? `${Math.floor(duration / 60)}m ${duration % 60}s` : '';
+  const stopScreenShare = useCallback(() => {
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop());
+    }
+    if (localStreamRef.current && pcRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) sender.replaceTrack(videoTrack);
+    }
+    setIsScreenSharing(false);
+  }, []);
 
-    await supabase.from('messages').insert({
-      sender_id: type === 'outgoing' ? currentUser.id : targetUser.id,
-      receiver_id: type === 'outgoing' ? targetUser.id : currentUser.id,
-      text: logStatus === 'missed' ? 'Missed call' : 
-            logStatus === 'declined' ? 'Call declined' : 
-            `Call ended • ${durationText}`,
-      type: 'call',
-      status: 'seen'
-    });
-  };
-
-  const endCall = async () => {
-    const finalStatus = timer === 0 && status !== 'connected' ? 'missed' : 'ended';
-    
+  const endCall = useCallback(async () => {
+    stopScreenShare();
+    if (pcRef.current) pcRef.current.close();
+    if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
     if (callId) {
-      await supabase.from('calls').update({ 
-        status: finalStatus,
-        ended_at: new Date().toISOString(),
-        duration_sec: timer
-      }).eq('id', callId);
+      await supabase.from('calls').update({ status: 'ended', duration_sec: timer }).eq('id', callId);
     }
-
-    await createCallLog(finalStatus, timer);
-
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-    }
-    if (pcRef.current) {
-      pcRef.current.close();
-    }
-    setStatus(finalStatus as 'ended' | 'missed');
-    setTimeout(onClose, 2000);
-  };
-
-  const handleReject = async () => {
-    if (callId) {
-      await supabase.from('calls').update({ status: 'rejected' }).eq('id', callId);
-    }
-    setStatus('rejected');
+    setStatus('ended');
     setTimeout(onClose, 1000);
+  }, [callId, onClose, stopScreenShare, supabase, timer]);
+
+  useEffect(() => {
+    initCall();
+    return () => {
+      endCall();
+    };
+  }, [initCall, endCall]);
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+    }
   };
 
-  const formatTime = (s: number) => {
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsVideoOff(!videoTrack.enabled);
+    }
+  };
+
+  const formatTimer = (s: number) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
     <motion.div 
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-between p-12 text-white"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.05 }}
+      className={clsx(
+        "fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center transition-all duration-500",
+        isPiP ? "w-64 h-96 right-6 bottom-6 top-auto left-auto rounded-3xl overflow-hidden shadow-2xl" : ""
+      )}
     >
-      <audio ref={remoteAudioRef} autoPlay />
+      {/* BACKGROUND VIDEO (REMOTE) */}
+      <div className="absolute inset-0 z-0">
+        <video 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/20" />
+      </div>
 
-      {/* Header */}
-      <div className="flex flex-col items-center gap-4 mt-12">
-        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/10 relative">
-          <img 
-            src={targetUser.avatar_url || "/default-avatar.png"} 
-            alt={targetUser.name}
-            className="w-full h-full object-cover"
-          />
-          {status === 'connecting' && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <Loader2 className="animate-spin" />
-            </div>
+      {/* HEADER INFO */}
+      <div className="absolute top-12 left-0 right-0 z-10 flex flex-col items-center text-white">
+        <motion.div 
+          initial={{ y: -20 }} 
+          animate={{ y: 0 }}
+          className="w-24 h-24 rounded-full border-4 border-white/20 overflow-hidden mb-4 shadow-xl relative"
+        >
+          <Image src={targetUser.avatar_url || "/default-avatar.png"} alt="" fill className="object-cover" />
+        </motion.div>
+        <h2 className="text-2xl font-black uppercase tracking-widest mb-1">{targetUser.name}</h2>
+        <div className="flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full">
+           {status === 'connected' ? (
+             <span className="text-xs font-black font-mono">{formatTimer(timer)}</span>
+           ) : (
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">{status}...</span>
+           )}
+        </div>
+      </div>
+
+      {/* LOCAL PREVIEW */}
+      <motion.div 
+        drag
+        dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
+        className="absolute top-32 right-6 w-32 h-48 bg-gray-900 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 cursor-move"
+      >
+        <video ref={localVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+        {isVideoOff && (
+          <div className="absolute inset-0 bg-gray-900 flex items-center justify-center text-white/50">
+            <VideoOff size={24} />
+          </div>
+        )}
+      </motion.div>
+
+      {/* CONTROLS */}
+      <div className="absolute bottom-16 left-0 right-0 z-30 flex items-center justify-center gap-6">
+        <button 
+          onClick={toggleMute}
+          className={clsx(
+            "w-14 h-14 rounded-full flex items-center justify-center transition-all backdrop-blur-md",
+            isMuted ? "bg-rose-500 text-white" : "bg-white/10 text-white hover:bg-white/20"
           )}
-        </div>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">{targetUser.name}</h2>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-1">
-            {status === 'calling' ? 'Calling...' :
-             status === 'ringing' ? 'Ringing...' : 
-             status === 'connecting' ? 'Connecting...' : 
-             status === 'connected' ? formatTime(timer) : 
-             status === 'rejected' ? 'Call Rejected' : 
-             status === 'missed' ? 'Missed Call' : 'Call Ended'}
-          </p>
-        </div>
+        >
+          {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+        </button>
+
+        <button 
+          onClick={toggleVideo}
+          className={clsx(
+            "w-14 h-14 rounded-full flex items-center justify-center transition-all backdrop-blur-md",
+            isVideoOff ? "bg-rose-500 text-white" : "bg-white/10 text-white hover:bg-white/20"
+          )}
+        >
+          {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
+        </button>
+
+        <button 
+          onClick={endCall}
+          className="w-18 h-18 bg-rose-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-rose-900/50 hover:bg-rose-700 transition-all active:scale-90"
+        >
+          <PhoneOff size={32} />
+        </button>
+
+        <button 
+          onClick={toggleScreenShare}
+          className={clsx(
+            "w-14 h-14 rounded-full flex items-center justify-center transition-all backdrop-blur-md",
+            isScreenSharing ? "bg-green-500 text-white" : "bg-white/10 text-white hover:bg-white/20"
+          )}
+        >
+          <Monitor size={24} />
+        </button>
+
+        <button 
+          onClick={() => setIsPiP(!isPiP)}
+          className="w-14 h-14 bg-white/10 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-white/20"
+        >
+          <Maximize2 size={24} className={isPiP ? "rotate-180" : ""} />
+        </button>
       </div>
 
-      {/* Visualizer Placeholder */}
-      <div className="flex items-center gap-1 h-20">
-        {[...Array(12)].map((_, i) => (
+      <AnimatePresence>
+        {status === 'connecting' && (
           <motion.div 
-            key={i}
-            animate={{ height: status === 'connected' ? [10, 40, 10] : 10 }}
-            transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.05 }}
-            className="w-1 bg-indigo-500 rounded-full"
-          />
-        ))}
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-col items-center gap-12 mb-12 w-full">
-        <div className="flex items-center justify-center gap-8 w-full">
-          <button 
-            onClick={() => setIsMuted(!isMuted)}
-            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center"
           >
-            {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
-          </button>
-
-          <button 
-            onClick={status === 'ringing' ? handleReject : endCall}
-            className="w-20 h-20 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl shadow-rose-500/20 active:scale-90 transition-all"
-          >
-            <PhoneOff size={32} />
-          </button>
-
-          <button 
-            onClick={() => setIsSpeaker(!isSpeaker)}
-            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isSpeaker ? 'bg-white text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
-          >
-            {isSpeaker ? <Volume2 size={24} /> : <VolumeX size={24} />}
-          </button>
-        </div>
-
-        <div className="w-full max-w-[200px] h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <motion.div 
-            animate={{ x: [-200, 200] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-            className="w-1/2 h-full bg-indigo-500/50 blur-sm"
-          />
-        </div>
-      </div>
+            <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
+            <p className="text-white font-black uppercase tracking-widest text-xs">Securing Connection...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

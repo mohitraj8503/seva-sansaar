@@ -6,7 +6,6 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { Languages } from "lucide-react";
-import { clsx } from "clsx";
 import { DEFAULT_CITY } from "@/lib/constants";
 import { sessionManager } from "@/lib/sessionManager";
 

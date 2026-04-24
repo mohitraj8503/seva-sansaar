@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Clock, Calendar, Send, Inbox, Image as ImageIcon, Mic } from 'lucide-react';
+import { BarChart3, Clock, Calendar, Send, Inbox, Image as ImageIcon, Mic } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 
 interface Stats {
@@ -37,7 +37,7 @@ export const ChatStats = React.memo(({ user }: { user: { id: string } }) => {
       setLoading(false);
     };
     fetchStats();
-  }, [user.id]);
+  }, [user.id, supabase]);
 
   if (loading) return <div className="p-8 text-center text-white/20 font-bold uppercase text-[10px] tracking-widest animate-pulse">Analyzing stats...</div>;
 

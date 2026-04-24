@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Delete, AlertCircle, Fingerprint } from 'lucide-react';
 import { chatLock } from '@/lib/chatLock';
@@ -18,6 +18,37 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
   const [lockoutTime, setLockoutTime] = useState(0);
   const [attempts, setAttempts] = useState(5);
   const [canBiometric, setCanBiometric] = useState(false);
+
+
+  const handleNumber = useCallback(async (n: string) => {
+    if (lockoutTime > 0 || pin.length >= 4) return;
+    const next = pin + n;
+    setPin(next);
+    if (next.length === 4) {
+      const result = await chatLock.verifyAndUnlock(userId, next);
+      if (result === 'success') {
+        setIsSuccess(true);
+        setTimeout(onUnlock, 800);
+      } else if (result === 'wrong') {
+        setIsWrong(true);
+        setPin("");
+        setAttempts(chatLock.getAttemptsRemaining(userId));
+        setTimeout(() => setIsWrong(false), 500);
+      } else {
+        setLockoutTime(chatLock.getLockoutTimeRemaining(userId));
+      }
+    }
+  }, [lockoutTime, onUnlock, pin, userId]);
+
+  const tryBiometric = useCallback(async () => {
+    const success = await biometric.authenticate(userId);
+    if (success) {
+      setIsSuccess(true);
+      setTimeout(onUnlock, 500);
+    }
+  }, [onUnlock, userId]);
+
+  const handleBackspace = useCallback(() => setPin(p => p.slice(0, -1)), []);
 
   useEffect(() => {
     const checkLockout = () => {
@@ -42,37 +73,20 @@ export const PINLock: React.FC<PINLockProps> = ({ onUnlock, userId }) => {
     checkBiometric();
 
     return () => clearInterval(timer);
-  }, [userId]);
+  }, [userId, tryBiometric]);
 
-  const handleNumber = async (n: string) => {
-    if (lockoutTime > 0 || pin.length >= 4) return;
-    const next = pin + n;
-    setPin(next);
-    if (next.length === 4) {
-      const result = await chatLock.verifyAndUnlock(userId, next);
-      if (result === 'success') {
-        setIsSuccess(true);
-        setTimeout(onUnlock, 800);
-      } else if (result === 'wrong') {
-        setIsWrong(true);
-        setPin("");
-        setAttempts(chatLock.getAttemptsRemaining(userId));
-        setTimeout(() => setIsWrong(false), 500);
-      } else {
-        setLockoutTime(chatLock.getLockoutTimeRemaining(userId));
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lockoutTime > 0) return;
+      if (e.key >= '0' && e.key <= '9') {
+        handleNumber(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
       }
-    }
-  };
-
-  const tryBiometric = async () => {
-    const success = await biometric.authenticate(userId);
-    if (success) {
-      setIsSuccess(true);
-      setTimeout(onUnlock, 500);
-    }
-  };
-
-  const handleBackspace = () => setPin(p => p.slice(0, -1));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lockoutTime, handleNumber, handleBackspace]);
 
   const formatLockout = (ms: number) => {
     const s = Math.ceil(ms / 1000);

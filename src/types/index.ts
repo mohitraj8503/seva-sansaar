@@ -28,6 +28,10 @@ export interface Message {
   isOptimistic?: boolean;
   edited_at?: string;
   deleted_by?: string[];
+  is_encrypted?: boolean;
+  ciphertext?: string;
+  nonce?: string;
+  expires_at?: string | null;
 }
 
 export interface Call {
@@ -48,4 +52,11 @@ export interface Call {
 export interface CallLog extends Call {
   peer: Profile;
   direction: 'incoming' | 'outgoing';
+}
+
+export interface SpecialDate {
+  id: string;
+  title: string;
+  date: string;
+  emoji: string;
 }
