@@ -23,6 +23,9 @@ export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
   const [heroQuery, setHeroQuery] = useState("");
+  const CITIES = ["Jamshedpur", "Ranchi", "Patna", "Kolkata", "Delhi", "Mumbai"];
+  const [selectedCity, setSelectedCity] = useState("Jamshedpur");
+
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -110,7 +113,8 @@ export default function Hero() {
 
       <div className="absolute inset-0 z-[2] bg-[rgba(10,20,50,0.62)]" aria-hidden />
 
-      <div className="relative z-10 flex min-h-[100svh] min-h-[100dvh] flex-col justify-center pt-[124px] pb-40 sm:pb-44">
+      <div className="relative z-10 flex min-h-[100svh] min-h-[100dvh] flex-col justify-center pt-[124px] pb-10 md:pb-52">
+
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <div
@@ -166,8 +170,34 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="absolute bottom-8 left-0 right-0 z-20 px-4 sm:bottom-10">
+        <div className="relative z-20 mt-10 px-4 md:absolute md:bottom-10 md:left-0 md:right-0 md:mt-0">
+            <div className="mx-auto mb-3 flex max-w-5xl flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+              <span><span className="text-white">5,000+</span> Verified Experts</span>
+              <span className="opacity-40">·</span>
+              <span><span className="text-white">100+</span> Cities</span>
+              <span className="opacity-40">·</span>
+              <span><span className="text-white">50,000+</span> Tasks Done</span>
+              <span className="hidden opacity-40 sm:inline">·</span>
+              <span className="hidden sm:inline"><span className="text-[#FF9933]">4.8★</span> Avg Rating</span>
+            </div>
+          <div className="mx-auto mb-3 flex max-w-5xl flex-wrap justify-center gap-2">
+            {CITIES.map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => setSelectedCity(city)}
+                className={`rounded-full px-4 py-1.5 text-xs font-bold backdrop-blur-md transition ${
+                  selectedCity === city
+                    ? "bg-[#FF9933] text-[#1a2d5c]"
+                    : "border border-white/15 bg-white/5 text-white/70 hover:bg-white/15"
+                }`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
           <form
+
             onSubmit={onHeroSearch}
             className="mx-auto max-w-5xl rounded-3xl border border-white/10 bg-white/5 p-2 shadow-2xl backdrop-blur-2xl transition-all duration-500 hover:border-white/20 sm:p-3"
             role="search"
@@ -178,7 +208,7 @@ export default function Hero() {
                 <div className="min-w-0 flex-1">
                   <span className="block text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Location</span>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-white">Jamshedpur</span>
+                    <span className="text-sm font-bold text-white">{selectedCity}</span>
                     <ChevronDown size={14} className="shrink-0 text-white/40" />
                   </div>
                 </div>
