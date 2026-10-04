@@ -1,48 +1,92 @@
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import * as admin from "firebase-admin";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
-// Initialize Firebase Admin
-if (getApps().length === 0) {
-  initializeApp();
+const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(
+  /\\n/g,
+  "\n"
+);
+
+if (!projectId || !clientEmail || !privateKey) {
+  throw new Error(
+    "Missing Firebase Admin credentials in .env.local"
+  );
 }
 
-const auth = getAuth();
+if (admin.apps.length === 0) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  });
+}
+
+const auth = admin.auth();
 
 const users = [
   {
     email: "mohitraj8503@gmail.com",
-    password: "thistooshallpass",
     displayName: "Mohit Raj",
+    password: process.env.ADMIN_USER_PASSWORD,
   },
   {
     email: "rishika@me.com",
-    password: "thistooshallpass",
     displayName: "Rishika",
+    password: process.env.RISHIKA_USER_PASSWORD,
   },
 ];
 
 async function createUsers() {
-  console.log("🚀 Creating Connectia Users...");
+  console.log("Creating Seva Sansaar users...");
+
   for (const user of users) {
+    if (!user.password) {
+      console.error(`Missing password for ${user.email}`);
+      continue;
+    }
+
     try {
-      const userRecord = await auth.createUser({
-        email: user.email,
-        password: user.password,
+      const existingUser = await auth.getUserByEmail(user.email);
+
+      await auth.updateUser(existingUser.uid, {
         displayName: user.displayName,
+        password: user.password,
       });
-      console.log(`✅ Successfully created user: ${userRecord.email}`);
-    } catch (error: any) {
-      if (error.code === 'auth/email-already-exists') {
-        console.log(`ℹ️ User ${user.email} already exists.`);
+
+      console.log(`Updated: ${user.email}`);
+    } catch (error: unknown) {
+      const firebaseError = error as {
+        code?: string;
+        message?: string;
+      };
+
+      if (firebaseError.code === "auth/user-not-found") {
+        const createdUser = await auth.createUser({
+          email: user.email,
+          password: user.password,
+          displayName: user.displayName,
+        });
+
+        console.log(`Created: ${createdUser.email}`);
       } else {
-        console.error(`❌ Error creating user ${user.email}:`, error.message);
+        console.error(
+          `Error for ${user.email}:`,
+          firebaseError.message ?? error
+        );
       }
     }
   }
-  console.log("🏁 Done!");
+
+  console.log("Done!");
 }
 
-createUsers();
+createUsers().catch((error) => {
+  console.error("User creation failed:", error);
+  process.exit(1);
+});

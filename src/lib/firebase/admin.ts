@@ -1,92 +1,122 @@
-/**
- * Firebase Admin SDK – server-side only (A3).
- * Lazy: no initialization until first use, so `next build` works without env vars.
- */
+import "server-only";
+
 import * as admin from "firebase-admin";
 import type { Firestore } from "firebase-admin/firestore";
 
-function getServiceAccountConfig(): { projectId: string; clientEmail: string; privateKey: string } | null {
+type ServiceAccountConfig = {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
+};
+
+function getServiceAccountConfig(): ServiceAccountConfig | null {
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  if (!projectId || !clientEmail || !privateKey) return null;
-  return { projectId, clientEmail, privateKey };
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(
+    /\\n/g,
+    "\n"
+  );
+
+  if (!projectId || !clientEmail || !privateKey) {
+    return null;
+  }
+
+  return {
+    projectId,
+    clientEmail,
+    privateKey,
+  };
 }
 
 export function getAdminApp(): admin.app.App | null {
   if (admin.apps.length > 0) {
-    return admin.apps[0]!;
+    return admin.apps[0] ?? null;
   }
-  const cfg = getServiceAccountConfig();
-  if (!cfg) return null;
+
+  const config = getServiceAccountConfig();
+
+  if (!config) {
+    return null;
+  }
+
   return admin.initializeApp({
-    credential: admin.credential.cert(cfg),
+    credential: admin.credential.cert({
+      projectId: config.projectId,
+      clientEmail: config.clientEmail,
+      privateKey: config.privateKey,
+    }),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 }
 
 export function getAdminDb(): Firestore | null {
   const app = getAdminApp();
-  if (!app) return null;
-  return admin.firestore(app);
+
+  return app ? admin.firestore(app) : null;
 }
 
-function getAuth(): admin.auth.Auth | null {
+function getAdminAuth(): admin.auth.Auth | null {
   const app = getAdminApp();
-  if (!app) return null;
-  return admin.auth(app);
+
+  return app ? admin.auth(app) : null;
 }
 
-function getStorage(): admin.storage.Storage | null {
+function getAdminStorage(): admin.storage.Storage | null {
   const app = getAdminApp();
-  if (!app) return null;
-  return admin.storage(app);
+
+  return app ? admin.storage(app) : null;
 }
 
-function proxyFirestore(): Firestore {
+function firebaseConfigError(): Error {
+  return new Error(
+    "Firebase Admin is not configured. Please set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL and FIREBASE_ADMIN_PRIVATE_KEY."
+  );
+}
+
+function createFirestoreProxy(): Firestore {
   return new Proxy({} as Firestore, {
-    get(_target, prop, receiver) {
+    get(_target, property, receiver) {
       const db = getAdminDb();
+
       if (!db) {
-        throw new Error(
-          "Firebase Admin is not configured. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY."
-        );
+        throw firebaseConfigError();
       }
-      return Reflect.get(db as object, prop, receiver);
+
+      return Reflect.get(db as object, property, receiver);
     },
   });
 }
 
-function proxyAuth(): admin.auth.Auth {
+function createAuthProxy(): admin.auth.Auth {
   return new Proxy({} as admin.auth.Auth, {
-    get(_target, prop, receiver) {
-      const a = getAuth();
-      if (!a) {
-        throw new Error(
-          "Firebase Admin is not configured. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY."
-        );
+    get(_target, property, receiver) {
+      const auth = getAdminAuth();
+
+      if (!auth) {
+        throw firebaseConfigError();
       }
-      return Reflect.get(a as object, prop, receiver);
+
+      return Reflect.get(auth as object, property, receiver);
     },
   });
 }
 
-function proxyStorage(): admin.storage.Storage {
+function createStorageProxy(): admin.storage.Storage {
   return new Proxy({} as admin.storage.Storage, {
-    get(_target, prop, receiver) {
-      const s = getStorage();
-      if (!s) {
-        throw new Error(
-          "Firebase Admin is not configured. Set FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY."
-        );
+    get(_target, property, receiver) {
+      const storage = getAdminStorage();
+
+      if (!storage) {
+        throw firebaseConfigError();
       }
-      return Reflect.get(s as object, prop, receiver);
+
+      return Reflect.get(storage as object, property, receiver);
     },
   });
 }
 
-export const adminDb = proxyFirestore();
-export const adminAuth = proxyAuth();
-export const adminStorage = proxyStorage();
+export const adminDb = createFirestoreProxy();
+export const adminAuth = createAuthProxy();
+export const adminStorage = createStorageProxy();
 
 export default getAdminApp;
