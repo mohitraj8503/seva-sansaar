@@ -7,11 +7,15 @@ import Testimonials from "@/components/Testimonials";
 import ListBusinessCTA from "@/components/ListBusinessCTA";
 import SevaBotWidget from "@/components/SevaBotWidget";
 import ScrollRevealSection from "@/components/ScrollRevealSection";
+import TrendingMarquee from "@/components/TrendingMarquee";
+import ArtisanShowcase from "@/components/ArtisanShowcase";
 
 export default function Home() {
   return (
     <>
       <Hero />
+      <TrendingMarquee />
+      <ArtisanShowcase />
       <ScrollRevealSection>
         <Stats />
       </ScrollRevealSection>
@@ -31,6 +35,7 @@ export default function Home() {
         <ListBusinessCTA />
       </ScrollRevealSection>
       <SevaBotWidget />
+      
     </>
   );
 }
