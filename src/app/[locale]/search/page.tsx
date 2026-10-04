@@ -14,6 +14,32 @@ import { SkeletonCard } from "@/components/SkeletonCard";
 const categoryOptions = ["All", "Electrician", "Tutor", "Repair", "Salon"];
 const ratingOptions = ["Any", "4.5+", "4.0+"];
 
+
+const cityOptions = [
+  {
+    name: "Jamshedpur",
+    lat: JAMSHEDPUR_REGION.center.lat,
+    lng: JAMSHEDPUR_REGION.center.lng,
+    wards: ["Sakchi", "Bistupur", "Mango", "Sonari"],
+  },
+  {
+    name: "Ranchi",
+    lat: 23.3441,
+    lng: 85.3096,
+    wards: ["Harmu", "Doranda", "Lalpur", "Kanke"],
+  },
+  {
+    name: "Patna",
+    lat: 25.5941,
+    lng: 85.1376,
+    wards: ["Kankarbagh", "Rajendra Nagar", "Patliputra", "Danapur"],
+  },
+];
+
+
+const radiusOptions = ["Any", "2 km", "5 km", "10 km", "20 km"];
+
+
 export default function SearchPage() {
   const t = useTranslations("Search");
   const tc = useTranslations("Common");
@@ -26,6 +52,8 @@ export default function SearchPage() {
   const [category, setCategory] = useState("All");
   const [rating, setRating] = useState("Any");
   const [distance, setDistance] = useState("Any");
+  const [city, setCity] = useState("Jamshedpur");
+  const [ward, setWard] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [mode, setMode] = useState<"nearest" | "recommended">("recommended");
   const [mapView, setMapView] = useState(false);
@@ -44,14 +72,16 @@ export default function SearchPage() {
         radiusKm: "25",
         mode,
       });
+
       if (category !== "All") params.set("category", category);
       if (searchTerm) params.set("q", searchTerm);
-      
+
       const res = await fetch(`/api/providers/nearby?${params.toString()}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Could not load providers.");
       }
+
       const data = (await res.json()) as NearbyProvidersResponse;
       setPayload(data);
     } catch (err: unknown) {
@@ -75,19 +105,56 @@ export default function SearchPage() {
     if (q) setSearchTerm(q);
   }, []);
 
-  const filtered = useMemo(() => {
+
+    useEffect(() => {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude);
+        setLng(pos.coords.longitude);
+        setGeoLabel("Your location");
+      },
+      () => {
+        setGeoLabel("Jamshedpur (default)");
+        setLat(JAMSHEDPUR_REGION.center.lat);
+        setLng(JAMSHEDPUR_REGION.center.lng);
+      },
+      { enableHighAccuracy: true, timeout: 12_000 }
+    );
+  }, []);
+
+      const filtered = useMemo(() => {
     let list = payload?.results ?? [];
+
+    if (ward !== "All") {
+      list = list.filter((b) =>
+        b.locality?.toLowerCase().includes(ward.toLowerCase())
+      );
+    }
+
     if (rating === "4.5+") list = list.filter((b) => b.rating >= 4.5);
     if (rating === "4.0+") list = list.filter((b) => b.rating >= 4.0);
-    if (distance === "< 2 km") list = list.filter((b) => b.distanceKm < 2);
-    if (distance === "< 5 km") list = list.filter((b) => b.distanceKm < 5);
-    return list;
-  }, [payload, rating, distance]);
 
-  const clearFilters = () => {
+    if (distance === "2 km") list = list.filter((b) => b.distanceKm <= 2);
+    if (distance === "5 km") list = list.filter((b) => b.distanceKm <= 5);
+    if (distance === "10 km") list = list.filter((b) => b.distanceKm <= 10);
+    if (distance === "20 km") list = list.filter((b) => b.distanceKm <= 20);
+
+    return list;
+  }, [payload, ward, rating, distance]);
+
+    const clearFilters = () => {
     setCategory("All");
     setRating("Any");
     setDistance("Any");
+    setCity("Jamshedpur");
+    setWard("All");
+    setLat(JAMSHEDPUR_REGION.center.lat);
+    setLng(JAMSHEDPUR_REGION.center.lng);
+    setGeoLabel("Jamshedpur (default)");
     setSearchTerm("");
   };
 
@@ -96,7 +163,9 @@ export default function SearchPage() {
       setError("Geolocation is not supported in this browser.");
       return;
     }
+
     setLocLoading(true);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLat(pos.coords.latitude);
@@ -145,6 +214,7 @@ export default function SearchPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full rounded-2xl border border-gray-200 bg-white py-4 pl-12 pr-4 text-sm font-semibold shadow-sm transition-all focus:border-navy focus:ring-4 focus:ring-navy/5"
               />
+
               {searchTerm && (
                 <button 
                   onClick={() => setSearchTerm("")}
@@ -154,6 +224,7 @@ export default function SearchPage() {
                 </button>
               )}
             </div>
+
             <button
               onClick={() => setMapView(!mapView)}
               className="group flex items-center gap-2 whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-6 py-4 text-sm font-bold text-gray-700 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md"
@@ -171,8 +242,11 @@ export default function SearchPage() {
               <MapPin className="text-navy" size={16} />
               <div className="text-xs">
                 <span className="block font-bold text-gray-900">{geoLabel}</span>
-                <span className="text-[10px] text-gray-400 uppercase tracking-tighter">{lat.toFixed(3)}, {lng.toFixed(3)}</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-tighter">
+                  {lat.toFixed(3)}, {lng.toFixed(3)}
+                </span>
               </div>
+
               <button 
                 onClick={useMyLocation}
                 disabled={locLoading}
@@ -189,6 +263,42 @@ export default function SearchPage() {
               <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
                 <Filter size={12} /> {t("filters")}
               </span>
+
+              <select
+                value={city}
+                onChange={(e) => {
+                  const selectedCity = cityOptions.find(opt => opt.name === e.target.value);
+                  setCity(e.target.value);
+                  setWard("All");
+
+                  if (selectedCity) {
+                    setLat(selectedCity.lat);
+                    setLng(selectedCity.lng);
+                    setGeoLabel(selectedCity.name);
+                  }
+                }}
+                aria-label="Select city"
+                className="rounded-xl border border-transparent bg-gray-50 px-3 py-2 text-xs font-bold text-navy outline-none transition-all hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-navy/5"
+              >
+                {cityOptions.map(opt => <option key={opt.name}>{opt.name}</option>)}
+              </select>
+
+              <select
+                value={ward}
+                onChange={(e) => setWard(e.target.value)}
+                aria-label="Select ward"
+                className="rounded-xl border border-transparent bg-gray-50 px-3 py-2 text-xs font-bold text-navy outline-none transition-all hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-navy/5"
+              >
+                <option value="All">All Areas</option>
+                {cityOptions
+                  .find(opt => opt.name === city)
+                  ?.wards.map(opt => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+              </select>
+
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -197,6 +307,7 @@ export default function SearchPage() {
               >
                 {categoryOptions.map(opt => <option key={opt}>{opt}</option>)}
               </select>
+
               <select
                 value={rating}
                 onChange={(e) => setRating(e.target.value)}
@@ -205,20 +316,33 @@ export default function SearchPage() {
               >
                 {ratingOptions.map(opt => <option key={opt}>{opt}</option>)}
               </select>
+
+              <select
+                value={distance}
+                onChange={(e) => setDistance(e.target.value)}
+                aria-label="Filter by distance"
+                className="rounded-xl border border-transparent bg-gray-50 px-3 py-2 text-xs font-bold text-navy outline-none transition-all hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-navy/5"
+              >
+                {radiusOptions.map(opt => <option key={opt}>{opt}</option>)}
+              </select>
+
               {(category !== "All" || rating !== "Any" || searchTerm) && (
-                 <button 
+                <button 
                   onClick={clearFilters} 
                   className="text-[10px] font-black uppercase tracking-wider text-[#FF9933] hover:text-[#e68a2e] px-2 py-1"
                   aria-label="Clear all filters"
-                 >
-                   Clear all
-                 </button>
+                >
+                  Clear all
+                </button>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-end lg:self-center">
-            <span className="mr-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{t("ranking")}</span>
+            <span className="mr-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+              {t("ranking")}
+            </span>
+
             <div className="flex rounded-xl bg-gray-100 p-1">
               <button
                 onClick={() => setMode("nearest")}
@@ -229,6 +353,7 @@ export default function SearchPage() {
               >
                 {t("nearest")}
               </button>
+
               <button
                 onClick={() => setMode("recommended")}
                 aria-label="Sort by recommended"
@@ -249,11 +374,13 @@ export default function SearchPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                 <X size={24} className="text-red-600" />
               </div>
+
               <div>
                 <p className="font-black">Oops! Something went wrong.</p>
                 <p className="text-sm font-medium opacity-80">{error}</p>
               </div>
             </div>
+
             <button 
               onClick={() => void fetchNearby()}
               className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold shadow-sm transition-all hover:shadow-md active:scale-95"
@@ -285,16 +412,19 @@ export default function SearchPage() {
                   priority={index < 2}
                 />
               ))}
-              
+
               {filtered.length === 0 && !error && (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gray-50">
                     <MapPin size={40} className="text-gray-300" />
                   </div>
+
                   <h3 className="text-2xl font-black text-gray-900">{t("noResults")}</h3>
+
                   <p className="mt-2 max-w-sm text-lg font-medium text-gray-500">
                     Try adjusting your filters, widening the search radius, or moving the map marker.
                   </p>
+
                   <button 
                     onClick={clearFilters}
                     className="mt-8 rounded-2xl bg-navy px-8 py-4 text-sm font-bold text-white shadow-xl shadow-navy/20 transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95"
@@ -310,6 +440,7 @@ export default function SearchPage() {
     </main>
   );
 }
+
 
 function SearchCard({ 
   business, 
@@ -336,8 +467,9 @@ function SearchCard({
           priority={priority}
           quality={80}
         />
+
         <div className="absolute left-4 top-4">
-           <VerificationBadge verified={business.verified} />
+          <VerificationBadge verified={business.verified} />
         </div>
       </div>
 
@@ -346,18 +478,21 @@ function SearchCard({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <h2 className="text-xl md:text-2xl font-black text-navy">{business.name}</h2>
+
               {mode === "recommended" && rank === 1 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold text-amber-700">
                   <TrendingUp size={10} /> Best Match
                 </span>
               )}
             </div>
+
             <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
               <span className="uppercase tracking-widest text-[#FF9933]">{business.category}</span>
               <span className="h-1 w-1 rounded-full bg-gray-200" />
               <span>{business.locality}</span>
             </div>
           </div>
+
           <div className="flex items-center gap-1.5 text-sm font-black text-amber-500 bg-amber-50 px-3 py-1 rounded-full">
             <span>★</span> {business.rating}
           </div>
@@ -368,15 +503,17 @@ function SearchCard({
         </p>
 
         <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-           <div className="flex items-center gap-1.5">
-              <Navigation size={12} className="text-navy/40" /> {business.distanceKm} km away
-           </div>
-           <div className="flex items-center gap-1.5">
-              <Sparkles size={12} className="text-[#FF9933]" /> {business.reviews} reviews
-           </div>
-           <div className="flex items-center gap-1.5 text-emerald-600">
-              <RefreshCw size={12} /> {(business.completionRate * 100).toFixed(0)}% success
-           </div>
+          <div className="flex items-center gap-1.5">
+            <Navigation size={12} className="text-navy/40" /> {business.distanceKm} km away
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Sparkles size={12} className="text-[#FF9933]" /> {business.reviews} reviews
+          </div>
+
+          <div className="flex items-center gap-1.5 text-emerald-600">
+            <RefreshCw size={12} /> {(business.completionRate * 100).toFixed(0)}% success
+          </div>
         </div>
 
         <div className="mt-auto flex items-center gap-3">
@@ -387,6 +524,7 @@ function SearchCard({
           >
             Book Now
           </Link>
+
           <Link 
             href={`/business/${business.slug}`}
             className="flex-1 text-center rounded-xl border border-gray-200 bg-white py-3.5 text-xs font-bold text-gray-600 transition-all hover:bg-gray-50 active:scale-95"
@@ -399,5 +537,3 @@ function SearchCard({
     </article>
   );
 }
-
-
