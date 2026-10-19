@@ -6,6 +6,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Extend window to satisfy TypeScript
 declare global {
@@ -30,8 +32,8 @@ function loadGoogleMapsScript(): Promise<void> {
     }
 
     const script = document.createElement('script');
-    script.id   = MAPS_SCRIPT_ID;
-    script.src  = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.id = MAPS_SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
     script.async = true;
     script.onload = () => {
       window.__googleMapsScriptLoaded = true;
@@ -54,7 +56,9 @@ export function useGoogleMaps() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    loadGoogleMapsScript().then(() => setReady(true)).catch(console.error);
+    loadGoogleMapsScript()
+      .then(() => setReady(true))
+      .catch(console.error);
   }, []);
 
   /**
@@ -76,11 +80,13 @@ export function useGoogleMaps() {
 
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
+
       if (!place.geometry?.location) return;
+
       onPlace({
         address: place.formatted_address ?? '',
-        lat:     place.geometry.location.lat(),
-        lng:     place.geometry.location.lng(),
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
         placeId: place.place_id ?? '',
       });
     });
@@ -99,8 +105,13 @@ interface BusinessMapProps {
   className?: string;
 }
 
-export function BusinessMap({ lat, lng, name, className = '' }: BusinessMapProps) {
-  const mapRef   = useRef<HTMLDivElement>(null);
+export function BusinessMap({
+  lat,
+  lng,
+  name,
+  className = '',
+}: BusinessMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
   const { ready } = useGoogleMaps();
 
   useEffect(() => {
@@ -108,11 +119,15 @@ export function BusinessMap({ lat, lng, name, className = '' }: BusinessMapProps
 
     const map = new window.google.maps.Map(mapRef.current, {
       center: { lat, lng },
-      zoom:   15,
+      zoom: 15,
       mapTypeControl: false,
       streetViewControl: false,
       styles: [
-        { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }],
+        },
       ],
     });
 
@@ -128,7 +143,11 @@ export function BusinessMap({ lat, lng, name, className = '' }: BusinessMapProps
     <div
       ref={mapRef}
       className={className}
-      style={{ minHeight: "300px", borderRadius: "12px", overflow: "hidden" }}
+      style={{
+        minHeight: '300px',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}
       aria-label={`Map showing location of ${name}`}
       role="region"
     />
@@ -142,37 +161,162 @@ interface SearchResultsMapProps {
   className?: string;
 }
 
-export function SearchResultsMap({ center, results, className = "" }: SearchResultsMapProps) {
+export function SearchResultsMap({
+  center,
+  results,
+  className = '',
+}: SearchResultsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const { ready } = useGoogleMaps();
 
   useEffect(() => {
-    if (!ready || !mapRef.current || !window.google) return;
+    if (!mapRef.current) return;
 
-    const map = new window.google.maps.Map(mapRef.current, {
-      center,
+    const map = L.map(mapRef.current, {
+      center: [center.lat, center.lng],
       zoom: 13,
-      mapTypeControl: false,
-      streetViewControl: false,
-      styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
+      zoomControl: true,
     });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
 
     results.forEach((res) => {
-      new window.google.maps.Marker({
-        position: { lat: res.lat, lng: res.lng },
-        map,
+      const markerIcon = L.divIcon({
+        className: '',
+        html: `
+          <div
+            style="
+              width: 34px;
+              height: 34px;
+              border-radius: 50% 50% 50% 0;
+              background: #0f172a;
+              transform: rotate(-45deg);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+              border: 3px solid white;
+              transition: transform 0.2s ease;
+            "
+          >
+            <span
+              style="
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: white;
+              "
+            ></span>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 34],
+        popupAnchor: [0, -32],
+      });
+
+      const marker = L.marker([res.lat, res.lng], {
+        icon: markerIcon,
         title: res.address,
-        animation: window.google.maps.Animation.DROP,
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div
+          style="
+            width: 220px;
+            padding: 4px;
+            font-family: Arial, sans-serif;
+          "
+        >
+          <div
+            style="
+              font-size: 16px;
+              font-weight: 700;
+              color: #0f172a;
+              margin-bottom: 6px;
+            "
+          >
+            ${res.address}
+          </div>
+
+          <div
+            style="
+              font-size: 12px;
+              color: #64748b;
+              margin-bottom: 10px;
+            "
+          >
+            Local service provider
+          </div>
+
+          <div
+            style="
+              display: inline-block;
+              padding: 5px 9px;
+              border-radius: 999px;
+              background: #f1f5f9;
+              color: #334155;
+              font-size: 11px;
+              font-weight: 600;
+            "
+          >
+            Seva Sansaar
+          </div>
+        </div>
+      `);
+
+      marker.on('mouseover', () => {
+        const element = marker.getElement();
+
+        if (element) {
+          element.style.transform = 'scale(1.2)';
+          element.style.zIndex = '1000';
+        }
+      });
+
+      marker.on('mouseout', () => {
+        const element = marker.getElement();
+
+        if (element) {
+          element.style.transform = '';
+          element.style.zIndex = '';
+        }
+      });
+
+      marker.on('click', () => {
+        marker.openPopup();
       });
     });
-  }, [ready, center, results]);
+
+    if (results.length > 0) {
+      const bounds = L.latLngBounds(
+        results.map(
+          (res) => [res.lat, res.lng] as [number, number]
+        )
+      );
+
+      map.fitBounds(bounds, {
+        padding: [40, 40],
+        maxZoom: 14,
+      });
+    }
+
+    return () => {
+      map.remove();
+    };
+  }, [center.lat, center.lng, results]);
 
   return (
     <div
       ref={mapRef}
       className={className}
-      style={{ minHeight: "400px", borderRadius: "12px", overflow: "hidden" }}
+      style={{
+        minHeight: '400px',
+        borderRadius: '12px',
+        overflow: 'hidden',
+      }}
+      aria-label="Map showing service providers"
+      role="region"
     />
   );
 }
-
